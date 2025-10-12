@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Carbon Offset Calculator</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              primary: "#16a34a", // Green
+              "background-light": "#f3f4f6", // Light Gray
+              "background-dark": "#1f2937", // Dark Gray
+              "surface-light": "#ffffff",
+              "surface-dark": "#374151",
+              "text-light": "#111827",
+              "text-dark": "#f9fafb",
+              "muted-light": "#6b7280",
+              "muted-dark": "#9ca3af",
+            },
+            fontFamily: {
+              display: ["Poppins", "sans-serif"],
+            },
+            borderRadius: {
+              DEFAULT: "0.5rem",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      .material-icons {
+        font-family: "Material Icons";
+        font-weight: normal;
+        font-style: normal;
+        font-size: 24px;
+        display: inline-block;
+        line-height: 1;
+        text-transform: none;
+        letter-spacing: normal;
+        word-wrap: normal;
+        white-space: nowrap;
+        direction: ltr;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        -moz-osx-font-smoothing: grayscale;
+        font-feature-settings: "liga";
+      }
+    </style>
+  </head>
+  <body
+    class="bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark"
+  >
+    <div class="min-h-screen flex items-center justify-center p-4">
+      <div
+        class="max-w-4xl w-full bg-surface-light dark:bg-surface-dark rounded-lg shadow-xl overflow-hidden"
+      >
+        <header
+          class="bg-gray-100 dark:bg-gray-800 p-4 border-b border-gray-200 dark:border-gray-700"
+        >
+          <h1 class="text-2xl font-bold text-center">
+            Carbon Offset Calculator
+          </h1>
+        </header>
+        <div class="border-b border-gray-200 dark:border-gray-700">
+          <nav aria-label="Tabs" class="-mb-px flex justify-center space-x-8">
+            <a
+              class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center"
+              href="#"
+            >
+              <span class="material-icons mr-2">flight</span> Air
+            </a>
+            <a
+              aria-current="page"
+              class="border-primary text-primary whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center"
+              href="#"
+            >
+              <span class="material-icons mr-2">directions_car</span> Car
+            </a>
+            <a
+              class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center"
+              href="#"
+            >
+              <span class="material-icons mr-2">home</span> Home
+            </a>
+            <a
+              class="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center"
+              href="#"
+            >
+              <span class="material-icons mr-2">flash_on</span> Quick
+            </a>
+          </nav>
+        </div>
+        <main class="p-8">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div
+              class="border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+            >
+              <h2 class="text-lg font-semibold mb-4 text-center">
+                Option 1: Enter Mileage
+              </h2>
+              <label
+                class="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
+                for="total-miles"
+                >Enter your trip mileage</label
+              >
+              <input
+                class="w-full bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark"
+                id="total-miles"
+                name="total-miles"
+                placeholder="total miles"
+                type="text"
+              />
+            </div>
+            <div
+              class="border border-gray-200 dark:border-gray-700 rounded-lg p-6"
+            >
+              <h2 class="text-lg font-semibold mb-4 text-center">
+                Option 2: Calculate Mileage
+              </h2>
+              <div class="grid grid-cols-1 gap-6">
+                <div>
+                  <label
+                    class="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
+                    for="start-location"
+                    >Starting Location</label
+                  >
+                  <input
+                    class="w-full bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark"
+                    id="start-location"
+                    name="start-location"
+                    placeholder="e.g., New York, NY"
+                    type="text"
+                  />
+                </div>
+                <div>
+                  <label
+                    class="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
+                    for="end-location"
+                    >End Location</label
+                  >
+                  <input
+                    class="w-full bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark"
+                    id="end-location"
+                    name="end-location"
+                    placeholder="e.g., Los Angeles, CA"
+                    type="text"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="mt-8">
+            <label
+              class="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
+              for="car-mpg"
+              >Car mpg (optional)</label
+            >
+            <input
+              class="w-full md:w-1/2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark"
+              id="car-mpg"
+              name="car-mpg"
+              type="text"
+              value="25"
+            />
+          </div>
+          <div class="mt-6 flex items-center">
+            <input
+              class="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded"
+              id="round-trip"
+              name="round-trip"
+              type="checkbox"
+            />
+            <label
+              class="ml-2 block text-sm text-text-light dark:text-text-dark"
+              for="round-trip"
+              >round trip?</label
+            >
+          </div>
+          <div
+            class="mt-8 border-t border-gray-200 dark:border-gray-700 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4"
+          >
+            <button
+              class="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-primary hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              type="button"
+            >
+              Calculate Offset
+            </button>
+            <p
+              class="text-sm text-muted-light dark:text-muted-dark text-center sm:text-right"
+            >
+              Or, send check to Sustainable Finger Lakes / 309 N Aurora /
+              Ithaca, NY 14850 with 'FLCF' in memo line
+            </p>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>

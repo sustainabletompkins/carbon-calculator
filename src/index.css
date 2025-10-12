@@ -1,6 +1,93 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #5cb85c;
+  --color-secondary: #5bc0de;
+  --color-accent: #0088cc;
+  --color-background-light: #e8f4f8;
+  --color-background-dark: #1f2937;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #374151;
+  --color-text-light: #2c3e50;
+  --color-text-dark: #f9fafb;
+  --color-muted-light: #6b7280;
+  --color-muted-dark: #9ca3af;
+
+  --font-family-display: Poppins, sans-serif;
+
+  --radius: 0.5rem;
+}
+
+/* Remove default margins for iframe embedding */
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  width: 100%;
+  height: 100%;
+}
+
+/* Material Icons Styling */
+.material-icons {
+  font-family: "Material Icons";
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "liga";
+}
+
+/* Enhanced Input Styling for better visibility */
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  background-color: #ffffff !important;
+  color: #2c3e50 !important;
+  border: 2px solid #d1e7f0 !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 1rem !important;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: #5bc0de !important;
+  box-shadow: 0 0 0 3px rgba(91, 192, 222, 0.1) !important;
+}
+
+input[type="text"]::placeholder,
+input[type="number"]::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Dark mode input adjustments */
+.dark input[type="text"],
+.dark input[type="number"],
+.dark select,
+.dark textarea {
+  background-color: #374151 !important;
+  color: #f9fafb !important;
+  border-color: #4b5563 !important;
+}
 
 /* Custom animations and styles for the modern carbon calculator */
 
@@ -22,7 +109,8 @@
 
 /* Enhanced pulse animation */
 @keyframes enhanced-pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
     transform: scale(1);
   }
@@ -38,7 +126,8 @@
 
 /* Floating animation for background elements */
 @keyframes float {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0px);
   }
   50% {
@@ -102,7 +191,8 @@ input:focus {
   backdrop-filter: blur(16px) !important;
   border-radius: 12px !important;
   border: 1px solid rgba(255, 255, 255, 0.2) !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
   margin-top: 4px !important;
   overflow: hidden !important;
 }
@@ -152,16 +242,30 @@ input[type="text"].pac-target-input {
 }
 
 .btn-gradient::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
   transition: left 0.5s;
 }
 
 .btn-gradient:hover::before {
   left: 100%;
+}
+
+/* Google Places Autocomplete - Hide clear button when no value */
+.hide-clear-button gmp-place-autocomplete::part(clear-button) {
+  display: none !important;
+}
+
+.hide-clear-button gmp-place-autocomplete {
+  --gmp-place-autocomplete-clear-button-display: none;
 }
