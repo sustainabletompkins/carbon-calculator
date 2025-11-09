@@ -5,9 +5,29 @@ import StripeCheckout from "./StripeCheckout";
 const Cart = ({ setActiveTab, onPaymentSuccess }) => {
   const { cart, removeFromCart, clearCart } = useContext(CartContext);
   const [showCheckout, setShowCheckout] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   const totalCost = cart.reduce((acc, item) => acc + item.cost, 0);
   const totalCo2 = cart.reduce((acc, item) => acc + item.co2, 0);
+
+  const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const handleCheckoutClick = () => {
+    if (!userEmail) {
+      setEmailError("Please enter your email address");
+      return;
+    }
+    if (!validateEmail(userEmail)) {
+      setEmailError("Please enter a valid email address");
+      return;
+    }
+    setEmailError("");
+    setShowCheckout(true);
+  };
 
   return (
     <main className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
@@ -116,10 +136,33 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
             </p>
           </div>
 
+          {/* Email Input Section */}
+          <div className="mb-4 sm:mb-6">
+            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+              Email Address <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={userEmail}
+              onChange={(e) => {
+                setUserEmail(e.target.value);
+                setEmailError("");
+              }}
+              placeholder="your.email@example.com"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+            />
+            {emailError && (
+              <p className="text-red-500 text-sm mt-2">{emailError}</p>
+            )}
+            <p className="text-xs text-muted-light dark:text-muted-dark mt-2">
+              We'll use this email to track your carbon offset records.
+            </p>
+          </div>
+
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
             <button
-              onClick={() => setShowCheckout(true)}
+              onClick={handleCheckoutClick}
               className="flex-1 inline-flex justify-center items-center bg-gradient-to-r from-primary to-secondary text-white py-3 px-6 rounded-lg font-semibold hover:from-primary/90 hover:to-secondary/90 transition-all duration-200 shadow-md"
             >
               <span className="material-icons mr-2">
@@ -191,6 +234,8 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
       {showCheckout && (
         <StripeCheckout
           totalAmount={totalCost}
+          cartItems={cart}
+          userEmail={userEmail}
           onSuccess={(result) => {
             setShowCheckout(false);
             clearCart();

@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { saveOffsetRecords } from "../utils/firestore";
 import "./StripeCheckout.css";
 
-const StripeCheckout = ({ totalAmount, onSuccess, onCancel }) => {
+const StripeCheckout = ({ totalAmount, cartItems, userEmail, onSuccess, onCancel }) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);
@@ -63,6 +64,18 @@ const StripeCheckout = ({ totalAmount, onSuccess, onCancel }) => {
 
       // Payment successful
       if (paymentIntent.status === "succeeded") {
+        // Save offset records to Firestore
+        try {
+          if (cartItems && cartItems.length > 0 && userEmail) {
+            await saveOffsetRecords(userEmail, paymentIntent.id, cartItems);
+            console.log("Offset records saved to Firestore successfully");
+          }
+        } catch (firestoreError) {
+          console.error("Error saving offset records:", firestoreError);
+          // Don't fail the payment process if Firestore save fails
+          // but log it for debugging
+        }
+
         onSuccess({
           id: paymentIntent.id,
           status: paymentIntent.status,
