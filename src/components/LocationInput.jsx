@@ -42,10 +42,10 @@ const LocationInput = ({ setOrigin, setDestination }) => {
           },
         });
         setHasOriginValue(true);
-        
+
         // Auto-focus the destination input after selecting origin
         setTimeout(() => {
-          const destInput = destinationAutocomplete.querySelector('input');
+          const destInput = destinationAutocomplete.querySelector("input");
           if (destInput) {
             destInput.focus();
           }
@@ -70,11 +70,11 @@ const LocationInput = ({ setOrigin, setDestination }) => {
       });
 
       // Listen for input changes to show/hide clear buttons
-      const originInput = originAutocomplete.querySelector('input');
-      const destInput = destinationAutocomplete.querySelector('input');
-      
+      const originInput = originAutocomplete.querySelector("input");
+      const destInput = destinationAutocomplete.querySelector("input");
+
       if (originInput) {
-        originInput.addEventListener('input', (e) => {
+        originInput.addEventListener("input", (e) => {
           const hasValue = e.target.value.length > 0;
           setHasOriginValue(hasValue);
           if (!hasValue) {
@@ -82,9 +82,9 @@ const LocationInput = ({ setOrigin, setDestination }) => {
           }
         });
       }
-      
+
       if (destInput) {
-        destInput.addEventListener('input', (e) => {
+        destInput.addEventListener("input", (e) => {
           const hasValue = e.target.value.length > 0;
           setHasDestinationValue(hasValue);
           if (!hasValue) {
@@ -104,7 +104,10 @@ const LocationInput = ({ setOrigin, setDestination }) => {
         >
           Starting Location
         </label>
-        <div ref={originRef} className={`w-full ${!hasOriginValue ? 'hide-clear-button' : ''}`} />
+        <div
+          ref={originRef}
+          className={`w-full ${!hasOriginValue ? "hide-clear-button" : ""}`}
+        />
       </div>
       <div>
         <label
@@ -113,7 +116,12 @@ const LocationInput = ({ setOrigin, setDestination }) => {
         >
           End Location
         </label>
-        <div ref={destinationRef} className={`w-full ${!hasDestinationValue ? 'hide-clear-button' : ''}`} />
+        <div
+          ref={destinationRef}
+          className={`w-full ${
+            !hasDestinationValue ? "hide-clear-button" : ""
+          }`}
+        />
       </div>
     </div>
   );

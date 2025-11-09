@@ -1,0 +1,244 @@
+.stripe-checkout-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.stripe-checkout-content {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stripe-checkout-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.stripe-checkout-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.stripe-checkout-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.stripe-checkout-close:hover {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.stripe-checkout-body {
+  padding: 24px;
+}
+
+.payment-amount {
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.payment-amount .label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.payment-amount .amount {
+  margin: 8px 0 0 0;
+  font-size: 32px;
+  font-weight: 700;
+  color: #059669;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.card-element-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-element-wrapper label {
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+#card-element {
+  padding: 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+}
+
+#card-element.StripeElement--focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.error-message {
+  padding: 12px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  color: #dc2626;
+  font-size: 14px;
+  margin: -8px 0 8px 0;
+}
+
+.stripe-checkout-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  flex: 1;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #1f2937;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #e5e7eb;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .stripe-checkout-content {
+    background-color: #1f2937;
+    color: #f3f4f6;
+  }
+
+  .stripe-checkout-header {
+    border-bottom-color: #374151;
+  }
+
+  .stripe-checkout-header h3 {
+    color: #f9fafb;
+  }
+
+  .stripe-checkout-close {
+    color: #9ca3af;
+  }
+
+  .stripe-checkout-close:hover {
+    background-color: #374151;
+    color: #f3f4f6;
+  }
+
+  .payment-amount {
+    background-color: #064e3b;
+    border-color: #10b981;
+  }
+
+  .payment-amount .label {
+    color: #d1d5db;
+  }
+
+  .payment-amount .amount {
+    color: #6ee7b7;
+  }
+
+  .card-element-wrapper label {
+    color: #f3f4f6;
+  }
+
+  #card-element {
+    background-color: #111827;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
+
+  .btn-secondary {
+    background-color: #374151;
+    color: #f3f4f6;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    background-color: #4b5563;
+  }
+}

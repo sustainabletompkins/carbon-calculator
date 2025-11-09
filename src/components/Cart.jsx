@@ -1,8 +1,10 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { CartContext } from "../contexts/CartContext";
+import StripeCheckout from "./StripeCheckout";
 
 const Cart = ({ setActiveTab }) => {
   const { cart, removeFromCart, clearCart } = useContext(CartContext);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const totalCost = cart.reduce((acc, item) => acc + item.cost, 0);
   const totalCo2 = cart.reduce((acc, item) => acc + item.co2, 0);
@@ -116,7 +118,10 @@ const Cart = ({ setActiveTab }) => {
 
           {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4">
-            <button className="flex-1 inline-flex justify-center items-center bg-gradient-to-r from-primary to-secondary text-white py-3 px-6 rounded-lg font-semibold hover:from-primary/90 hover:to-secondary/90 transition-all duration-200 shadow-md">
+            <button
+              onClick={() => setShowCheckout(true)}
+              className="flex-1 inline-flex justify-center items-center bg-gradient-to-r from-primary to-secondary text-white py-3 px-6 rounded-lg font-semibold hover:from-primary/90 hover:to-secondary/90 transition-all duration-200 shadow-md"
+            >
               <span className="material-icons mr-2">
                 shopping_cart_checkout
               </span>
@@ -181,6 +186,20 @@ const Cart = ({ setActiveTab }) => {
           </div>
         </div>
       </div>
+
+      {/* Stripe Checkout Modal */}
+      {showCheckout && (
+        <StripeCheckout
+          totalAmount={totalCost}
+          onSuccess={(result) => {
+            alert(`Payment successful! Order ID: ${result.id}`);
+            setShowCheckout(false);
+            clearCart();
+            setActiveTab("car");
+          }}
+          onCancel={() => setShowCheckout(false)}
+        />
+      )}
     </main>
   );
 };
