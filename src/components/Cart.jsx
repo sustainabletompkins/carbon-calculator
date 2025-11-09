@@ -2,7 +2,7 @@ import { useContext, useState } from "react";
 import { CartContext } from "../contexts/CartContext";
 import StripeCheckout from "./StripeCheckout";
 
-const Cart = ({ setActiveTab }) => {
+const Cart = ({ setActiveTab, onPaymentSuccess }) => {
   const { cart, removeFromCart, clearCart } = useContext(CartContext);
   const [showCheckout, setShowCheckout] = useState(false);
 
@@ -192,10 +192,12 @@ const Cart = ({ setActiveTab }) => {
         <StripeCheckout
           totalAmount={totalCost}
           onSuccess={(result) => {
-            alert(`Payment successful! Order ID: ${result.id}`);
             setShowCheckout(false);
             clearCart();
-            setActiveTab("car");
+            if (onPaymentSuccess) {
+              onPaymentSuccess(result);
+            }
+            setActiveTab("thankyou");
           }}
           onCancel={() => setShowCheckout(false)}
         />

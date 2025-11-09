@@ -7,6 +7,7 @@ import AirCalculator from "./AirCalculator";
 import HomeCalculator from "./HomeCalculator";
 import QuickOffset from "./QuickOffset";
 import Cart from "./Cart";
+import ThankYou from "./ThankYou";
 
 const CarCalculator = ({ setActiveTab }) => {
   const [origin, setOrigin] = useState(null);
@@ -243,6 +244,7 @@ const CarCalculator = ({ setActiveTab }) => {
 
 const CarbonCalculator = () => {
   const [activeTab, setActiveTab] = useState("car");
+  const [paymentDetails, setPaymentDetails] = useState(null);
   const { cart } = useContext(CartContext);
 
   const tabs = [
@@ -253,6 +255,11 @@ const CarbonCalculator = () => {
     { id: "cart", label: "Cart", icon: "shopping_cart" },
   ];
 
+  // Show thank you tab only if we have payment details
+  const visibleTabs = paymentDetails
+    ? [...tabs, { id: "thankyou", label: "Thank You", icon: "done_all" }]
+    : tabs;
+
   return (
     <div className="w-full h-full bg-background-light dark:bg-background-dark">
       <div className="bg-gradient-to-r from-secondary/20 to-primary/20 border-b-2 border-secondary/30 dark:border-gray-700">
@@ -260,7 +267,7 @@ const CarbonCalculator = () => {
           aria-label="Tabs"
           className="-mb-px flex justify-center space-x-4 sm:space-x-8 px-2"
         >
-          {tabs.map((tab) => (
+          {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
@@ -288,7 +295,15 @@ const CarbonCalculator = () => {
       {activeTab === "air" && <AirCalculator setActiveTab={setActiveTab} />}
       {activeTab === "home" && <HomeCalculator setActiveTab={setActiveTab} />}
       {activeTab === "quick" && <QuickOffset setActiveTab={setActiveTab} />}
-      {activeTab === "cart" && <Cart setActiveTab={setActiveTab} />}
+      {activeTab === "cart" && (
+        <Cart
+          setActiveTab={setActiveTab}
+          onPaymentSuccess={(details) => setPaymentDetails(details)}
+        />
+      )}
+      {activeTab === "thankyou" && (
+        <ThankYou paymentDetails={paymentDetails} setActiveTab={setActiveTab} />
+      )}
     </div>
   );
 };
