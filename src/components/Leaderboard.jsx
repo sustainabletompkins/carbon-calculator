@@ -13,7 +13,7 @@ export default function Leaderboard() {
         setLoading(true);
         const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:3000";
         console.log("Fetching from:", `${apiUrl}/api/team-funding`);
-        
+
         const response = await fetch(`${apiUrl}/api/team-funding`);
 
         if (!response.ok) {
@@ -25,7 +25,9 @@ export default function Leaderboard() {
         setError(null);
       } catch (err) {
         console.error("Error fetching team data:", err);
-        setError(`${err.message}. Make sure the backend server is running on port 3000.`);
+        setError(
+          `${err.message}. Make sure the backend server is running on port 3000.`
+        );
       } finally {
         setLoading(false);
       }
@@ -131,7 +133,8 @@ export default function Leaderboard() {
                 {sortedTeams.map((team, index) => {
                   const rank = index + 1;
                   const isTopThree = rank <= 3;
-                  const medalEmoji = rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉";
+                  const medalEmoji =
+                    rank === 1 ? "🥇" : rank === 2 ? "🥈" : "🥉";
 
                   return (
                     <tr
@@ -203,7 +206,9 @@ export default function Leaderboard() {
                 Total Funds
               </p>
               <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {formatCurrency(teams.reduce((sum, team) => sum + team.pounds, 0))}
+                {formatCurrency(
+                  teams.reduce((sum, team) => sum + team.pounds, 0)
+                )}
               </p>
             </div>
             <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-gray-200 dark:border-slate-700">

@@ -3,10 +3,12 @@ import { CartContext } from "../contexts/CartContext";
 import StripeCheckout from "./StripeCheckout";
 
 const Cart = ({ setActiveTab, onPaymentSuccess }) => {
-  const { cart, removeFromCart, clearCart } = useContext(CartContext);
+  const { cart, addToCart, removeFromCart, clearCart } = useContext(CartContext);
   const [showCheckout, setShowCheckout] = useState(false);
   const [userEmail, setUserEmail] = useState("");
   const [emailError, setEmailError] = useState("");
+  const [donationAmount, setDonationAmount] = useState("");
+  const [donationError, setDonationError] = useState("");
 
   const totalCost = cart.reduce((acc, item) => acc + item.cost, 0);
   const totalCo2 = cart.reduce((acc, item) => acc + item.co2, 0);
@@ -14,6 +16,36 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
+  };
+
+  const handleAddDonation = () => {
+    const amount = parseFloat(donationAmount);
+    
+    if (!donationAmount || donationAmount.trim() === "") {
+      setDonationError("Please enter a donation amount");
+      return;
+    }
+    
+    if (isNaN(amount) || amount <= 0) {
+      setDonationError("Please enter a valid amount greater than $0");
+      return;
+    }
+    
+    if (amount > 10000) {
+      setDonationError("Maximum donation amount is $10,000");
+      return;
+    }
+    
+    const donationItem = {
+      type: "donation",
+      cost: amount,
+      co2: 0,
+      description: `Direct Donation`,
+    };
+    
+    addToCart(donationItem);
+    setDonationAmount("");
+    setDonationError("");
   };
 
   const handleCheckoutClick = () => {
@@ -36,19 +68,112 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
       </h2>
 
       {cart.length === 0 ? (
-        <div className="text-center py-8 sm:py-12">
-          <span
-            className="material-icons text-gray-300 dark:text-gray-600 mb-4"
-            style={{ fontSize: "48px" }}
-          >
-            shopping_cart
-          </span>
-          <p className="text-gray-500 dark:text-gray-400 mb-2">
-            Your cart is empty.
-          </p>
-          <p className="text-xs sm:text-sm text-muted-light dark:text-muted-dark mb-6">
-            Calculate your carbon footprint and add offsets to get started!
-          </p>
+        <div>
+          <div className="text-center py-8 sm:py-12">
+            <span
+              className="material-icons text-gray-300 dark:text-gray-600 mb-4"
+              style={{ fontSize: "48px" }}
+            >
+              shopping_cart
+            </span>
+            <p className="text-gray-500 dark:text-gray-400 mb-2">
+              Your cart is empty.
+            </p>
+            <p className="text-xs sm:text-sm text-muted-light dark:text-muted-dark mb-6">
+              Calculate your carbon footprint and add offsets to get started!
+            </p>
+          </div>
+
+          {/* Donation Section - Visible in Empty Cart */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-icons text-blue-600 dark:text-blue-400">
+                favorite
+              </span>
+              <h3 className="font-semibold text-text-light dark:text-text-dark">
+                Make a Direct Donation
+              </h3>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Want to contribute directly to environmental initiatives without calculating a specific carbon offset? Add a donation to your order.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex-1">
+                <input
+                  type="number"
+                  value={donationAmount}
+                  onChange={(e) => {
+                    setDonationAmount(e.target.value);
+                    setDonationError("");
+                  }}
+                  placeholder="Enter donation amount (USD)"
+                  min="0.01"
+                  max="10000"
+                  step="0.01"
+                  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                {donationError && (
+                  <p className="text-red-500 text-sm mt-2">{donationError}</p>
+                )}
+              </div>
+              <button
+                onClick={handleAddDonation}
+                className="inline-flex justify-center items-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white py-3 px-6 rounded-lg font-medium transition-colors whitespace-nowrap"
+              >
+                <span className="material-icons mr-2">add_circle</span>
+                Add Donation
+              </button>
+            </div>
+          </div>
+
+          {/* Call to Action for Adding More */}
+          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
+            <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-lg p-4 sm:p-6 border border-green-200 dark:border-green-800">
+              <div className="flex items-start gap-3 sm:gap-4">
+                <span className="material-icons text-primary text-2xl sm:text-3xl">
+                  info
+                </span>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-sm sm:text-base text-text-light dark:text-text-dark mb-2">
+                    Want to offset your carbon footprint?
+                  </h3>
+                  <p className="text-sm text-muted-light dark:text-muted-dark mb-4">
+                    Calculate and add offsets for your trips and activities to maximize your positive impact on the environment.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => setActiveTab("car")}
+                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
+                    >
+                      <span className="material-icons text-sm">directions_car</span>
+                      Add Car Trip
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("air")}
+                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
+                    >
+                      <span className="material-icons text-sm">flight</span>
+                      Add Flight
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("home")}
+                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
+                    >
+                      <span className="material-icons text-sm">home</span>
+                      Add Home Energy
+                    </button>
+                    <button
+                      onClick={() => setActiveTab("quick")}
+                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
+                    >
+                      <span className="material-icons text-sm">flash_on</span>
+                      Quick Offset
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         <div>
@@ -62,14 +187,18 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="material-icons text-primary text-sm">
-                        {item.tripMode === "car"
+                        {item.type === "donation"
+                          ? "favorite"
+                          : item.tripMode === "car"
                           ? "directions_car"
                           : item.tripMode === "air"
                           ? "flight"
                           : "home"}
                       </span>
                       <p className="font-semibold text-text-light dark:text-text-dark">
-                        {item.tripMode === "car"
+                        {item.type === "donation"
+                          ? "Direct Donation"
+                          : item.tripMode === "car"
                           ? "Car Trip"
                           : item.tripMode === "air"
                           ? "Air Travel"
@@ -82,17 +211,23 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
                         {item.destination && `→ ${item.destination}`}
                       </p>
                     )}
-                    <div className="flex gap-4 mt-2 text-xs text-muted-light dark:text-muted-dark">
-                      <span>{item.distance.toFixed(2)} miles</span>
-                      <span>•</span>
-                      <span>{item.co2.toFixed(2)} kg CO2</span>
-                      {item.travelers && item.travelers > 1 && (
-                        <>
-                          <span>•</span>
-                          <span>{item.travelers} travelers</span>
-                        </>
-                      )}
-                    </div>
+                    {item.type === "donation" ? (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                        Contribution to support environmental initiatives
+                      </p>
+                    ) : (
+                      <div className="flex gap-4 mt-2 text-xs text-muted-light dark:text-muted-dark">
+                        <span>{item.distance.toFixed(2)} miles</span>
+                        <span>•</span>
+                        <span>{item.co2.toFixed(2)} kg CO2</span>
+                        {item.travelers && item.travelers > 1 && (
+                          <>
+                            <span>•</span>
+                            <span>{item.travelers} travelers</span>
+                          </>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-3">
                     <p className="font-bold text-primary text-lg">
