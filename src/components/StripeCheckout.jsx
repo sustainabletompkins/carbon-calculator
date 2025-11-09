@@ -3,7 +3,13 @@ import { CardElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { saveOffsetRecords } from "../utils/firestore";
 import "./StripeCheckout.css";
 
-const StripeCheckout = ({ totalAmount, cartItems, userEmail, onSuccess, onCancel }) => {
+const StripeCheckout = ({
+  totalAmount,
+  cartItems,
+  userEmail,
+  onSuccess,
+  onCancel,
+}) => {
   const stripe = useStripe();
   const elements = useElements();
   const [loading, setLoading] = useState(false);

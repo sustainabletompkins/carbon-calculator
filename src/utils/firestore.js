@@ -1,4 +1,9 @@
-import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
 /**
  * Save offset records to Firestore for each cart item
@@ -7,7 +12,11 @@ import { getFirestore, collection, addDoc, serverTimestamp } from "firebase/fire
  * @param {Array} cartItems - Array of offset items from the cart
  * @returns {Promise<Array>} - Array of created document IDs
  */
-export const saveOffsetRecords = async (userEmail, transactionId, cartItems) => {
+export const saveOffsetRecords = async (
+  userEmail,
+  transactionId,
+  cartItems
+) => {
   try {
     const db = getFirestore();
     const offsetsCollection = collection(db, "offsets");
@@ -36,7 +45,9 @@ export const saveOffsetRecords = async (userEmail, transactionId, cartItems) => 
       docIds.push(docRef.id);
     }
 
-    console.log(`Successfully saved ${docIds.length} offset records to Firestore`);
+    console.log(
+      `Successfully saved ${docIds.length} offset records to Firestore`
+    );
     return docIds;
   } catch (error) {
     console.error("Error saving offset records to Firestore:", error);
@@ -52,9 +63,13 @@ export const saveOffsetRecords = async (userEmail, transactionId, cartItems) => 
 const getOffsetDescription = (item) => {
   switch (item.tripMode) {
     case "car":
-      return `Car trip: ${item.origin} to ${item.destination} (${item.distance?.toFixed(2)} miles)`;
+      return `Car trip: ${item.origin} to ${
+        item.destination
+      } (${item.distance?.toFixed(2)} miles)`;
     case "air":
-      return `Air travel: ${item.origin} to ${item.destination} (${item.distance?.toFixed(2)} miles)`;
+      return `Air travel: ${item.origin} to ${
+        item.destination
+      } (${item.distance?.toFixed(2)} miles)`;
     case "home":
       return `Home energy offset: ${item.co2?.toFixed(2)} kg CO2`;
     case "quick":
