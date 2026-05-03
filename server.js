@@ -2,8 +2,47 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import Stripe from "stripe";
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
+import path from "path";
+import fs from "fs";
+import admin from "firebase-admin";
 
 dotenv.config();
+
+// ─── Firebase Admin init ─────────────────────────────────────────────────────
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const serviceAccountPath = path.join(__dirname, "scripts/serviceAccountKey.json");
+
+if (!admin.apps.length) {
+  if (fs.existsSync(serviceAccountPath)) {
+    const require = createRequire(import.meta.url);
+    const serviceAccount = require(serviceAccountPath);
+    admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+  } else {
+    // Fall back to application default credentials (Cloud Run, etc.)
+    admin.initializeApp();
+  }
+}
+
+const db = admin.firestore();
+
+// ─── Region ID → name (loaded from regions.json) ─────────────────────────────
+const regionsPath = path.join(__dirname, "regions.json");
+const REGION_NAMES = fs.existsSync(regionsPath)
+  ? fs
+      .readFileSync(regionsPath, "utf-8")
+      .split("\n")
+      .reduce((map, line) => {
+        const trimmed = line.trim();
+        if (!trimmed) return map;
+        try {
+          const r = JSON.parse(trimmed);
+          if (r.id != null && r.name) map[r.id] = r.name;
+        } catch { /* skip malformed */ }
+        return map;
+      }, {})
+  : {};
 
 const app = express();
 const stripe = new Stripe(process.env.VITE_STRIPE_SECRET_KEY);
@@ -19,7 +58,58 @@ app.get("/health", (req, res) => {
   res.json({ status: "Server is running" });
 });
 
-// Team funding data endpoint
+// Regions endpoint — reads from Firestore `regions` collection
+app.get("/api/regions", async (_req, res) => {
+  try {
+    const snapshot = await db.collection("regions").orderBy("name", "asc").get();
+    const regions = snapshot.docs.map((doc) => {
+      const d = doc.data();
+      return { id: d.legacyId, name: d.name };
+    });
+    return res.json(regions);
+  } catch (err) {
+    console.error("Error fetching regions:", err);
+    return res.status(500).json({ error: "Failed to fetch regions" });
+  }
+});
+
+// Teams endpoint — reads from Firestore
+// ?order=pounds (default) | count
+// ?type=team (default) | individual  — filters by isIndividual flag
+app.get("/api/teams", async (req, res) => {
+  const orderBy = req.query.order === "count" ? "count" : "pounds";
+  const typeFilter = req.query.type === "individual" ? "individual" : "team";
+
+  try {
+    const snapshot = await db
+      .collection("teams")
+      .orderBy(orderBy, "desc")
+      .get();
+
+    const teams = snapshot.docs
+      .map((doc) => {
+        const d = doc.data();
+        return {
+          team: d.name,
+          pounds: d.pounds ?? 0,
+          count: d.count ?? 0,
+          region: REGION_NAMES[d.regionId] ?? null,
+          image: d.image ?? "",
+          isIndividual: d.isIndividual ?? false,
+        };
+      })
+      .filter((t) =>
+        typeFilter === "individual" ? t.isIndividual : !t.isIndividual
+      );
+
+    return res.json(teams);
+  } catch (err) {
+    console.error("Error fetching teams:", err);
+    return res.status(500).json({ error: "Failed to fetch teams" });
+  }
+});
+
+// Team funding data endpoint (legacy hardcoded data — kept for backwards compatibility)
 app.get("/api/team-funding", (req, res) => {
   const teamFundingData = [
     { team: "The Rainy Day Fund", pounds: 800000.0, count: 1, region: null },

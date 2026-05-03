@@ -1,6 +1,7 @@
-const functions = require("firebase-functions");
+const functions = require("firebase-functions/v1");
 const admin = require("firebase-admin");
 const https = require("https");
+const nodemailer = require("nodemailer");
 
 admin.initializeApp();
 
@@ -168,3 +169,160 @@ async function logSyncError(offsetId, error) {
     console.error("Failed to log sync error:", logError);
   }
 }
+
+// ─── Email notification ───────────────────────────────────────────────────────
+
+/**
+ * Firebase Cloud Function: Sends a notification email when an offset is
+ * attributed to a team or individual account (i.e. teamId is first set).
+ *
+ * Required Firebase Functions config (set with `firebase functions:config:set`):
+ *   mail.smtp_host   e.g. smtp.gmail.com
+ *   mail.smtp_port   e.g. 587
+ *   mail.smtp_user   your SMTP username / email
+ *   mail.smtp_pass   your SMTP password / app password
+ *   mail.from        e.g. "Finger Lakes Climate Fund <noreply@example.com>"
+ *   app.url          e.g. https://your-app.web.app
+ */
+exports.notifyOnAttribution = functions.firestore
+  .document("offsets/{offsetId}")
+  .onUpdate(async (change) => {
+    const before = change.before.data();
+    const after = change.after.data();
+
+    // Only fire when teamId is newly set (wasn't set before)
+    if (before.teamId || !after.teamId) return null;
+
+    const email = after.userEmail;
+    if (!email || !email.includes("@")) {
+      console.log("No valid email on offset — skipping notification.");
+      return null;
+    }
+
+    try {
+      const db = admin.firestore();
+
+      // Fetch team/individual account for cumulative stats
+      const teamsRef = db.collection("teams");
+      const teamSnap = await teamsRef
+        .where("legacyId", "==", after.teamId)
+        .limit(1)
+        .get();
+
+      let accountName = "your account";
+      let totalPounds = 0;
+      let isIndividual = false;
+
+      if (!teamSnap.empty) {
+        const teamData = teamSnap.docs[0].data();
+        accountName = teamData.name;
+        totalPounds = teamData.pounds ?? 0;
+        isIndividual = teamData.isIndividual ?? false;
+      }
+
+      // Fetch user's display name
+      const usersRef = db.collection("users");
+      const userSnap = await usersRef
+        .where("email", "==", email)
+        .limit(1)
+        .get();
+      const firstName = userSnap.empty
+        ? "there"
+        : (userSnap.docs[0].data().name || "there").split(" ")[0];
+
+      const smtpHost = process.env.MAIL_SMTP_HOST;
+      const smtpPort = process.env.MAIL_SMTP_PORT || "587";
+      const smtpUser = process.env.MAIL_SMTP_USER;
+      const smtpPass = process.env.MAIL_SMTP_PASS;
+      const mailFrom = process.env.MAIL_FROM;
+      const appUrl = process.env.APP_URL || "https://your-app.web.app";
+
+      if (!smtpHost || !smtpUser || !smtpPass) {
+        console.warn(
+          "Mail env vars not set — skipping notification. " +
+          "Add MAIL_SMTP_HOST, MAIL_SMTP_USER, MAIL_SMTP_PASS to functions/.env"
+        );
+        return null;
+      }
+
+      const transporter = nodemailer.createTransport({
+        host: smtpHost,
+        port: parseInt(smtpPort, 10),
+        secure: smtpPort === "465",
+        auth: { user: smtpUser, pass: smtpPass },
+      });
+
+      const thisPounds = Math.round(after.carbonPounds ?? 0);
+      const totalFormatted = new Intl.NumberFormat("en-US").format(Math.round(totalPounds));
+      const thisFormatted = new Intl.NumberFormat("en-US").format(thisPounds);
+      const accountLabel = isIndividual ? "individual account" : "team";
+
+      const html = `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#f0fdf4;font-family:system-ui,sans-serif;">
+  <div style="max-width:520px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">
+
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,#16a34a,#0d9488);padding:32px 32px 24px;text-align:center;">
+      <p style="margin:0 0 8px;font-size:32px;">🌿</p>
+      <h1 style="margin:0;color:#fff;font-size:22px;font-weight:700;">Carbon Offset Confirmed</h1>
+      <p style="margin:8px 0 0;color:#bbf7d0;font-size:14px;">Finger Lakes Climate Fund</p>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:28px 32px;">
+      <p style="margin:0 0 20px;color:#374151;font-size:15px;">Hi ${firstName},</p>
+      <p style="margin:0 0 20px;color:#374151;font-size:15px;line-height:1.6;">
+        Thank you for your purchase! Your offset of
+        <strong style="color:#16a34a;">${thisFormatted} lbs CO₂</strong>
+        has been credited to your ${accountLabel}
+        <strong>${accountName}</strong>.
+      </p>
+
+      <!-- Stats card -->
+      <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:20px;margin-bottom:24px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:12px;color:#6b7280;text-transform:uppercase;letter-spacing:.05em;">
+          ${accountLabel === "team" ? "Team" : "Your"} Total CO₂ Offset
+        </p>
+        <p style="margin:0;font-size:32px;font-weight:800;color:#16a34a;">${totalFormatted} lbs</p>
+      </div>
+
+      <p style="margin:0 0 24px;color:#374151;font-size:15px;line-height:1.6;">
+        See how you rank against other ${accountLabel === "team" ? "teams" : "individuals"} on the leaderboard:
+      </p>
+
+      <div style="text-align:center;margin-bottom:24px;">
+        <a href="${appUrl}"
+           style="display:inline-block;background:#16a34a;color:#fff;text-decoration:none;
+                  font-weight:700;font-size:15px;padding:14px 32px;border-radius:10px;">
+          View Leaderboard →
+        </a>
+      </div>
+
+      <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;line-height:1.6;">
+        Finger Lakes Climate Fund · <a href="${appUrl}" style="color:#16a34a;">fingerlakesclimatefund.org</a><br>
+        You're receiving this because you made a carbon offset purchase.
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+      await transporter.sendMail({
+        from: mailFrom || `"Finger Lakes Climate Fund" <${smtpUser}>`,
+        to: email,
+        subject: `Your ${thisFormatted} lb CO₂ offset is confirmed 🌿`,
+        html,
+      });
+
+      console.log(`Notification email sent to ${email} for offset attributed to team ${after.teamId}`);
+      return null;
+    } catch (err) {
+      console.error("Error sending notification email:", err);
+      // Don't throw — email failure shouldn't block other processing
+      return null;
+    }
+  });

@@ -2,6 +2,7 @@ import { useState } from "react";
 import "./App.css";
 import CarbonCalculator from "./components/CarbonCalculator";
 import Leaderboard from "./components/Leaderboard";
+import FirestoreTest from "./components/FirestoreTest";
 
 function App() {
   const [currentPage, setCurrentPage] = useState("calculator");
@@ -36,6 +37,16 @@ function App() {
               >
                 Leaderboard
               </button>
+              <button
+                onClick={() => setCurrentPage("test")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  currentPage === "test"
+                    ? "bg-green-600 text-white"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+                }`}
+              >
+                Firestore Test
+              </button>
             </div>
           </div>
         </div>
@@ -45,6 +56,7 @@ function App() {
       <div>
         {currentPage === "calculator" && <CarbonCalculator />}
         {currentPage === "leaderboard" && <Leaderboard />}
+        {currentPage === "test" && <FirestoreTest />}
       </div>
     </div>
   );

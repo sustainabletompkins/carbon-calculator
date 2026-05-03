@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cart items: allow unauthenticated users to read/write their own items by email
+    match /cartItems/{cartItemId} {
+      allow read, write: if true;
+    }
+
+    // Offsets: public read, allow client writes for saving purchase records
+    match /offsets/{offsetId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Users: allow read/write (email-based identity, no auth)
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // Teams: public read, allow writes for team management
+    match /teams/{teamId} {
+      allow read: if true;
+      allow write: if true;
+    }
+
+    // Team members: public read, allow writes
+    match /teamMembers/{memberId} {
+      allow read: if true;
+      allow write: if true;
+    }
+  }
+}

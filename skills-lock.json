@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "design-system": {
+      "source": "anthropics/knowledge-work-plugins",
+      "sourceType": "github",
+      "skillPath": "design/skills/design-system/SKILL.md",
+      "computedHash": "83a5c0b188fd242ee36817e0fd18c603654b2bd5227bf1ba5fc80af1d706ff8f"
+    }
+  }
+}

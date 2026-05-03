@@ -1,14 +1,30 @@
-import { useContext, useState } from "react";
+import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../contexts/CartContext";
 import StripeCheckout from "./StripeCheckout";
 
 const Cart = ({ setActiveTab, onPaymentSuccess }) => {
-  const { cart, addToCart, removeFromCart, clearCart } = useContext(CartContext);
+  const {
+    cart,
+    addToCart,
+    removeFromCart,
+    clearCart,
+    userEmail,
+    setUserEmail,
+  } = useContext(CartContext);
   const [showCheckout, setShowCheckout] = useState(false);
-  const [userEmail, setUserEmail] = useState("");
+  const [localUserEmail, setLocalUserEmail] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userZipCode, setUserZipCode] = useState("");
   const [emailError, setEmailError] = useState("");
   const [donationAmount, setDonationAmount] = useState("");
   const [donationError, setDonationError] = useState("");
+
+  // Initialize local email from context
+  useEffect(() => {
+    if (userEmail) {
+      setLocalUserEmail(userEmail);
+    }
+  }, [userEmail]);
 
   const totalCost = cart.reduce((acc, item) => acc + item.cost, 0);
   const totalCo2 = cart.reduce((acc, item) => acc + item.co2, 0);
@@ -20,45 +36,54 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
 
   const handleAddDonation = () => {
     const amount = parseFloat(donationAmount);
-    
+
     if (!donationAmount || donationAmount.trim() === "") {
       setDonationError("Please enter a donation amount");
       return;
     }
-    
+
     if (isNaN(amount) || amount <= 0) {
       setDonationError("Please enter a valid amount greater than $0");
       return;
     }
-    
+
     if (amount > 10000) {
       setDonationError("Maximum donation amount is $10,000");
       return;
     }
-    
+
     const donationItem = {
       type: "donation",
       cost: amount,
       co2: 0,
       description: `Direct Donation`,
     };
-    
+
     addToCart(donationItem);
     setDonationAmount("");
     setDonationError("");
   };
 
   const handleCheckoutClick = () => {
-    if (!userEmail) {
+    if (!localUserEmail) {
       setEmailError("Please enter your email address");
       return;
     }
-    if (!validateEmail(userEmail)) {
+    if (!validateEmail(localUserEmail)) {
       setEmailError("Please enter a valid email address");
       return;
     }
     setEmailError("");
+    // Set user email in context for Firestore operations
+    setUserEmail(localUserEmail);
     setShowCheckout(true);
+  };
+
+  // Store user info for webhook integration
+  const userInfo = {
+    email: localUserEmail,
+    name: userName,
+    zipCode: userZipCode,
   };
 
   return (
@@ -95,7 +120,9 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
               </h3>
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Want to contribute directly to environmental initiatives without calculating a specific carbon offset? Add a donation to your order.
+              Want to contribute directly to environmental initiatives without
+              calculating a specific carbon offset? Add a donation to your
+              order.
             </p>
             <div className="flex flex-col sm:flex-row gap-3">
               <div className="flex-1">
@@ -138,14 +165,17 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
                     Want to offset your carbon footprint?
                   </h3>
                   <p className="text-sm text-muted-light dark:text-muted-dark mb-4">
-                    Calculate and add offsets for your trips and activities to maximize your positive impact on the environment.
+                    Calculate and add offsets for your trips and activities to
+                    maximize your positive impact on the environment.
                   </p>
                   <div className="flex flex-wrap gap-2">
                     <button
                       onClick={() => setActiveTab("car")}
                       className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
                     >
-                      <span className="material-icons text-sm">directions_car</span>
+                      <span className="material-icons text-sm">
+                        directions_car
+                      </span>
                       Add Car Trip
                     </button>
                     <button
@@ -271,27 +301,68 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
             </p>
           </div>
 
-          {/* Email Input Section */}
-          <div className="mb-4 sm:mb-6">
-            <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
-              Email Address <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              value={userEmail}
-              onChange={(e) => {
-                setUserEmail(e.target.value);
-                setEmailError("");
-              }}
-              placeholder="your.email@example.com"
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-            />
-            {emailError && (
-              <p className="text-red-500 text-sm mt-2">{emailError}</p>
-            )}
-            <p className="text-xs text-muted-light dark:text-muted-dark mt-2">
-              We'll use this email to track your carbon offset records.
-            </p>
+          {/* User Information Section */}
+          <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-blue-200 dark:border-blue-800">
+            <h3 className="font-semibold text-text-light dark:text-text-dark mb-4">
+              Contact Information
+            </h3>
+            
+            {/* Email Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                Email Address <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={localUserEmail}
+                onChange={(e) => {
+                  setLocalUserEmail(e.target.value);
+                  setEmailError("");
+                }}
+                placeholder="your.email@example.com"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              {emailError && (
+                <p className="text-red-500 text-sm mt-2">{emailError}</p>
+              )}
+              <p className="text-xs text-muted-light dark:text-muted-dark mt-2">
+                We'll use this to track your carbon offset records and link your purchases.
+              </p>
+            </div>
+
+            {/* Name Input */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="John Doe"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <p className="text-xs text-muted-light dark:text-muted-dark mt-2">
+                Used for donation receipts and recognition (optional)
+              </p>
+            </div>
+
+            {/* Zip Code Input */}
+            <div>
+              <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
+                Zip Code
+              </label>
+              <input
+                type="text"
+                value={userZipCode}
+                onChange={(e) => setUserZipCode(e.target.value)}
+                placeholder="14850"
+                className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-text-light dark:text-text-dark placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+              />
+              <p className="text-xs text-muted-light dark:text-muted-dark mt-2">
+                Used for location-based tracking (optional)
+              </p>
+            </div>
           </div>
 
           {/* Action Buttons */}
@@ -370,7 +441,9 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
         <StripeCheckout
           totalAmount={totalCost}
           cartItems={cart}
-          userEmail={userEmail}
+          userEmail={localUserEmail}
+          userName={userName}
+          userZipCode={userZipCode}
           onSuccess={(result) => {
             setShowCheckout(false);
             clearCart();

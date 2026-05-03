@@ -32,7 +32,7 @@ const CarCalculator = ({ setActiveTab }) => {
 
     try {
       const travelMode = getTravelMode("car");
-      const apiKey = "AIzaSyB5FKv-bUndJIx7zRFJw8sPXzjVqhRof0M"; // TODO: Move to environment variable
+      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
       const routeResult = await computeRoute(
         origin,

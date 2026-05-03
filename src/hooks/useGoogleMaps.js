@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { setOptions, importLibrary } from "@googlemaps/js-api-loader";
 
 setOptions({
-  key: "AIzaSyB5FKv-bUndJIx7zRFJw8sPXzjVqhRof0M", // TODO: Replace with your API key
+  key: import.meta.env.VITE_GOOGLE_API_KEY,
   version: "weekly",
 });
 

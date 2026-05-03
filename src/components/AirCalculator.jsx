@@ -27,7 +27,7 @@ const AirCalculator = ({ setActiveTab }) => {
     setIsCalculating(true);
 
     try {
-      const apiKey = "AIzaSyB5FKv-bUndJIx7zRFJw8sPXzjVqhRof0M";
+      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
       // For air travel, we calculate straight-line distance (great circle)
       const routeResult = await computeRoute(

@@ -109,10 +109,10 @@ const ThankYou = ({ paymentDetails, setActiveTab }) => {
           <p className="text-xs sm:text-sm text-muted-light dark:text-muted-dark">
             Contact us at{" "}
             <a
-              href="mailto:support@carboncalculator.com"
+              href="mailto:sustainablefingerlakes@gmail.com"
               className="text-primary hover:text-primary/80 font-semibold underline"
             >
-              support@carboncalculator.com
+              sustainablefingerlakes@gmail.com
             </a>
           </p>
         </div>
