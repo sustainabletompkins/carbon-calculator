@@ -207,7 +207,7 @@ function LeaderboardColumn({ title, icon: Icon, data, loading, error, sortBy, on
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function Leaderboard() {
+export default function Leaderboard({ onNavigate }) {
   const [teams, setTeams] = useState([]);
   const [individuals, setIndividuals] = useState([]);
   const [loadingTeams, setLoadingTeams] = useState(true);
@@ -281,6 +281,15 @@ export default function Leaderboard() {
           <p className="text-gray-500 dark:text-gray-400 max-w-xl mx-auto text-sm">
             Celebrating the teams and individuals making the biggest impact on our carbon offset initiative.
           </p>
+          {onNavigate && (
+            <button
+              onClick={() => onNavigate("join")}
+              className="mt-4 inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold px-5 py-2.5 rounded-lg shadow-sm transition-colors"
+            >
+              <Users className="w-4 h-4" />
+              Join the Carbon Race
+            </button>
+          )}
         </div>
 
         {/* Global summary bar */}

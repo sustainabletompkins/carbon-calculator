@@ -9,6 +9,7 @@ import fs from "fs";
 import admin from "firebase-admin";
 import { createAdminRouter } from "./adminRoutes.js";
 import { createPublicRouter } from "./publicRoutes.js";
+import { createRaceRouter } from "./raceRoutes.js";
 import { createLedger } from "./lib/ledger.js";
 
 dotenv.config();
@@ -113,6 +114,11 @@ app.use(
     cacheSeconds: PUBLIC_API_CACHE_SECONDS,
   })
 );
+
+// ─── Carbon Race sign-up (no auth) — see raceRoutes.js ──────────────────────
+// Lets a visitor join a team, start one, or register as an individual, so the
+// leaderboard isn't admin-only to get onto.
+app.use("/api/race", createRaceRouter({ db, ledger, regionNames: REGION_NAMES }));
 
 // Health check endpoint
 app.get("/health", (req, res) => {

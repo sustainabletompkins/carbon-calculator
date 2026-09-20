@@ -25,6 +25,7 @@ import {
   readPublicStatsSettings,
   PUBLIC_STATS_DOC,
 } from "./lib/ledger.js";
+import { allocateLegacyId, assertNameAvailable } from "./lib/teams.js";
 
 const PAYMENT_METHODS = ["check", "cash", "credit_card", "ach", "stock", "in_kind", "other"];
 
@@ -451,14 +452,11 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
     "/teams",
     wrap(async (req, res) => {
       const t = parseTeam(req.body);
-      const snap = await db.collection("teams").get();
-      const lower = t.name.toLowerCase();
-      if (snap.docs.some((d) => (d.data().name || "").trim().toLowerCase() === lower && (d.data().isIndividual === true) === t.isIndividual)) {
-        throw new HttpError(409, "A team with that name already exists");
-      }
-      // legacyId is what memberships and offsets reference; keep it unique
-      // across teams AND individuals.
-      const nextLegacyId = snap.docs.reduce((m, d) => Math.max(m, num(d.data().legacyId)), 0) + 1;
+      await assertNameAvailable(db, t.name, t.isIndividual);
+      // legacyId is what memberships and offsets reference; it has to stay
+      // unique across teams AND individuals, and visitors create accounts
+      // through /api/race at the same time — hence the shared allocator.
+      const nextLegacyId = await allocateLegacyId(db);
       const ref = await db.collection("teams").add({
         legacyId: nextLegacyId,
         name: t.name,
@@ -597,6 +595,9 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
         email,
         name: cleanStr(req.body.name, 200),
         teamId: team.legacyId,
+        // Attribution resolves the team by doc ID; without this the checkout
+        // flow has only legacyId to go on.
+        teamDocId: team.ref.id,
         teamName: team.name,
         offsets: 0,
         founder: req.body.founder === true,

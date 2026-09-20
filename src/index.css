@@ -122,6 +122,12 @@ textarea::placeholder {
   color: var(--color-subtle) !important;
 }
 
+/* Leading-icon search fields: the padding above is !important, so the room
+   for the icon has to be too. */
+input.has-leading-icon {
+  padding-left: 2.75rem !important;
+}
+
 /* Error state — applied via aria-invalid="true" */
 input[aria-invalid="true"],
 select[aria-invalid="true"],

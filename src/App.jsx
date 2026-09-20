@@ -2,16 +2,34 @@ import { useState, useEffect } from "react";
 import "./App.css";
 import CarbonCalculator from "./components/CarbonCalculator";
 import Leaderboard from "./components/Leaderboard";
+import JoinRace from "./components/race/JoinRace";
 import FirestoreTest from "./components/FirestoreTest";
 import { CartToast } from "./components/ui/CartToast";
 import AdminPage from "./components/admin/AdminPage";
 import { useAuth } from "./contexts/AuthContext";
 
-const PAGES = ["calculator", "leaderboard", "test", "admin"];
+const PAGES = ["calculator", "leaderboard", "join", "test", "admin"];
 
 function pageFromPath() {
   const slug = window.location.pathname.replace(/^\/+|\/+$/g, "");
   return PAGES.includes(slug) ? slug : "calculator";
+}
+
+/** Nav tab. `shortLabel` keeps the bar from overflowing on narrow screens. */
+function NavButton({ active, onClick, label, shortLabel }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`shrink-0 whitespace-nowrap px-2.5 sm:px-4 py-2 rounded-lg text-sm sm:text-base font-medium transition-colors ${
+        active
+          ? "bg-green-600 text-white"
+          : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+      }`}
+    >
+      <span className="sm:hidden">{shortLabel || label}</span>
+      <span className="hidden sm:inline">{label}</span>
+    </button>
+  );
 }
 
 function App() {
@@ -37,43 +55,37 @@ function App() {
       {/* Navigation */}
       <nav className="sticky top-0 z-50 bg-white dark:bg-slate-800 border-b border-gray-200 dark:border-slate-700 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="font-bold text-xl text-text-light dark:text-text-dark">
-              Carbon Calculator
+          <div className="flex justify-between items-center gap-2 h-16">
+            {/* Abbreviated on phones so the tabs — including "Join" — all fit. */}
+            <div className="shrink-0 font-bold text-base sm:text-xl text-text-light dark:text-text-dark">
+              <span className="sm:hidden">Carbon</span>
+              <span className="hidden sm:inline">Carbon Calculator</span>
             </div>
-            <div className="flex gap-2">
-              <button
+            <div className="flex gap-1 sm:gap-2 overflow-x-auto">
+              <NavButton
+                active={currentPage === "calculator"}
                 onClick={() => setCurrentPage("calculator")}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentPage === "calculator"
-                    ? "bg-green-600 text-white"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
-                }`}
-              >
-                Calculator
-              </button>
-              <button
+                label="Calculator"
+                shortLabel="Offset"
+              />
+              <NavButton
+                active={currentPage === "leaderboard"}
                 onClick={() => setCurrentPage("leaderboard")}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentPage === "leaderboard"
-                    ? "bg-green-600 text-white"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
-                }`}
-              >
-                Leaderboard
-              </button>
-
+                label="Leaderboard"
+                shortLabel="Board"
+              />
+              <NavButton
+                active={currentPage === "join"}
+                onClick={() => setCurrentPage("join")}
+                label="Join the Race"
+                shortLabel="Join"
+              />
               {isAdmin && (
-                <button
+                <NavButton
+                  active={currentPage === "admin"}
                   onClick={() => setCurrentPage("admin")}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    currentPage === "admin"
-                      ? "bg-green-600 text-white"
-                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
-                  }`}
-                >
-                  Admin
-                </button>
+                  label="Admin"
+                />
               )}
             </div>
           </div>
@@ -83,7 +95,8 @@ function App() {
       {/* Page Content */}
       <div>
         {currentPage === "calculator" && <CarbonCalculator />}
-        {currentPage === "leaderboard" && <Leaderboard />}
+        {currentPage === "leaderboard" && <Leaderboard onNavigate={setCurrentPage} />}
+        {currentPage === "join" && <JoinRace onNavigate={setCurrentPage} />}
         {currentPage === "test" && <FirestoreTest />}
         {currentPage === "admin" && <AdminPage />}
       </div>
