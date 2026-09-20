@@ -9,13 +9,15 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node server.js",
+    "start": "node server.js",
+    "gcp-build": "",
+    "deploy": "npm run build && gcloud app deploy",
     "dev:all": "concurrently \"npm run server\" \"npm run dev\"",
-    "migrate:offsets": "node scripts/migrateOffsetsToFirestore.js",
-    "migrate:cartItems": "node scripts/migrateCartItemsToFirestore.js",
-    "migrate:users": "node scripts/migrateUsersToFirestore.js",
-    "seed:teams": "node scripts/seedTeamsToFirestore.js",
-    "seed:individuals": "node scripts/seedIndividualsToFirestore.js",
-    "seed:regions": "node scripts/seedRegionsToFirestore.js"
+    "migrate:all": "node scripts/migrateAll.js",
+    "admin:grant": "node scripts/setAdminClaim.js grant",
+    "admin:revoke": "node scripts/setAdminClaim.js revoke",
+    "admin:list": "node scripts/setAdminClaim.js list",
+    "deploy:env": "node scripts/writeDeployEnv.js"
   },
   "dependencies": {
     "@googlemaps/js-api-loader": "^2.0.1",

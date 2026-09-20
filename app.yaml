@@ -1,12 +1,39 @@
-runtime: nodejs20 # or nodejs20, etc.
+runtime: nodejs24
+
+# One service does both jobs:
+#   /api/* and /health → the Express server (server.js, started by `npm start`)
+#   everything else    → the static Vite build in dist/
+# Because the API shares the site's origin, the browser needs no API URL and
+# no CORS configuration.
+#
+# Server secrets live in env_variables.yaml, which is NOT in git.
+# Create it with:  npm run deploy:env
+includes:
+  - env_variables.yaml
 
 handlers:
-  # Serve all static files from the dist directory
+  - url: /api/.*
+    script: auto
+    secure: always
+
+  - url: /health
+    script: auto
+    secure: always
+
+  # App shell
   - url: /
     static_files: dist/index.html
     upload: dist/index.html
+    secure: always
 
-  # Route all other requests to the dist directory
+  # Client-side routes handled by the React app
+  - url: /(admin|leaderboard|test)/?
+    static_files: dist/index.html
+    upload: dist/index.html
+    secure: always
+
+  # Built assets
   - url: /(.*)
     static_files: dist/\1
     upload: dist/(.*)
+    secure: always

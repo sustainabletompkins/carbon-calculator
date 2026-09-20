@@ -15,3 +15,33 @@
 
 # Node.js dependencies:
 node_modules/
+# Legacy database dumps contain donor PII — keep them off the server
+data_dump/
+
+# Secrets: never upload. App Engine gets its secrets from env_variables.yaml
+# (merged into app.yaml at deploy time) and its Firebase credentials from the
+# project's default service account.
+.env
+.env.*
+env_variables.yaml
+serviceAccountKey.json
+scripts/serviceAccountKey.json
+
+# Legacy export files contain donor PII. The server only needs regions.json.
+users.json
+offsets.json
+teams.json
+team_members.json
+individuals.json
+
+# Not needed at runtime
+src/
+functions/
+docs/
+designs/
+public/
+
+# Tooling
+.claude/
+skills-lock.json
+project-specs.md
