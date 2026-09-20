@@ -179,24 +179,23 @@ const StripeCheckout = ({
               ...teamAccounts,
             ];
 
-            if (accounts.length === 1) {
-              // Auto-attribute — no prompt needed
-              await attributeOffsetToTeam(accounts[0].docId, paymentIntent.id);
-            } else if (accounts.length > 1) {
-              // Multiple options — let the user choose
-              const totalPounds = cartItems.reduce(
-                (sum, item) => sum + (item.co2 ? item.co2 * 2.20462 : 0),
-                0
-              );
-              setTeamPrompt({
-                accounts,
-                totalPounds,
-                totalDollars: totalAmount,
-                paymentIntentId: paymentIntent.id,
-                paymentResult,
-              });
-              return; // Hold until selection
-            }
+            // Always prompt, whatever the account count. The prompt is also
+            // where someone joins or starts a team, and skipping it when
+            // there were no accounts is what left first-time buyers with
+            // nowhere to put the credit. A lone account arrives preselected,
+            // so confirming it is one click.
+            const totalPounds = cartItems.reduce(
+              (sum, item) => sum + (item.co2 ? item.co2 * 2.20462 : 0),
+              0
+            );
+            setTeamPrompt({
+              accounts,
+              totalPounds,
+              totalDollars: totalAmount,
+              paymentIntentId: paymentIntent.id,
+              paymentResult,
+            });
+            return; // Hold until the visitor chooses
           } catch (accountError) {
             console.warn("Could not resolve account for attribution:", accountError);
           }
@@ -214,19 +213,13 @@ const StripeCheckout = ({
     }
   };
 
-  const handleTeamContribute = async (teamDocId) => {
-    if (!teamPrompt) return;
-    try {
-      await attributeOffsetToTeam(teamDocId, teamPrompt.paymentIntentId);
-    } catch (err) {
-      console.error("Error attributing offset to team:", err);
-      // Don't block the success flow
-    }
-    setTeamPrompt(null);
-    onSuccess(teamPrompt.paymentResult);
-  };
+  // Credits the purchase and lets failures through: the modal keeps itself
+  // open and explains, rather than closing on a celebration that didn't
+  // happen. Closing the modal is what finishes checkout.
+  const handleTeamContribute = (teamDocId) =>
+    attributeOffsetToTeam(teamDocId, teamPrompt.paymentIntentId);
 
-  const handleTeamSkip = () => {
+  const handleTeamClose = () => {
     if (!teamPrompt) return;
     const result = teamPrompt.paymentResult;
     setTeamPrompt(null);
@@ -237,10 +230,11 @@ const StripeCheckout = ({
     return (
       <TeamContributionModal
         accounts={teamPrompt.accounts}
+        email={userEmail}
         totalPounds={teamPrompt.totalPounds}
         totalDollars={teamPrompt.totalDollars}
         onContribute={handleTeamContribute}
-        onSkip={handleTeamSkip}
+        onClose={handleTeamClose}
       />
     );
   }

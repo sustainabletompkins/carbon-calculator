@@ -64,7 +64,7 @@ export default function TeamPicker({ email, memberOfDocIds, onJoined, onCancel }
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search teams by name or region…"
-          className="has-leading-icon"
+          className="w-full has-leading-icon"
           aria-label="Search teams"
         />
       </div>
