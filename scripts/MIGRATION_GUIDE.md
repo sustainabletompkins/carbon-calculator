@@ -1,177 +1,67 @@
-# Offsets JSON to Firestore Migration Guide
+# Legacy data migration
 
-## Overview
+One command rebuilds Firestore from a dump of the old Postgres database. It is
+wipe-and-reload, so it can be run as many times as needed until launch.
+Background and decisions: [docs/DATA_MIGRATION_PLAN.md](../docs/DATA_MIGRATION_PLAN.md).
 
-This migration script transforms offset records from `offsets.json` (JSONL format) and uploads them to your Firestore database as a collection called `offsets`.
+## 1. Get a dump
 
-## Prerequisites
-
-1. **Environment Variables**: Ensure your `.env` file contains the required Firebase configuration:
-
-   ```
-   VITE_FIREBASE_API_KEY=your_api_key
-   VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   VITE_FIREBASE_PROJECT_ID=your_project_id
-   VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-   VITE_FIREBASE_APP_ID=your_app_id
-   VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
-   ```
-
-2. **Source Data**: The `offsets.json` file should be in JSONL format (one JSON object per line)
-
-3. **Firestore Database**: Your Firebase project should have Firestore enabled
-
-## Schema Mapping
-
-The script maps the source JSON fields to the following Firestore schema:
-
-| Source Field          | Firestore Field     | Type           | Notes                    |
-| --------------------- | ------------------- | -------------- | ------------------------ |
-| `id`                  | `id`                | number         | Used as document ID      |
-| `user_id`             | `userId`            | number or null |                          |
-| `title`               | `title`             | string         |                          |
-| `pounds`              | `pounds`            | number         | Converted to float       |
-| `cost`                | `cost`              | number         | Converted to float       |
-| `purchased`           | `purchased`         | boolean        |                          |
-| `name`                | `name`              | string         |                          |
-| `zipcode`             | `zipcode`           | number or null | Converted to integer     |
-| `created_at`          | `createdAt`         | timestamp      | Converted to Date object |
-| `updated_at`          | `updatedAt`         | timestamp      | Converted to Date object |
-| `email`               | `email`             | string         |                          |
-| `team_id`             | `teamId`            | number         | Default: 0               |
-| `individual_id`       | `individualId`      | number         | Default: 0               |
-| `region_id`           | `regionId`          | number or null |                          |
-| `checkout_session_id` | `checkoutSessionId` | string or null |                          |
-| `offset_type`         | `offsetType`        | string or null |                          |
-| `offset_interval`     | `offsetInterval`    | string or null |                          |
-
-## Running the Migration
-
-### Option 1: Using npm script
+On a machine with access to the old database (`-At` avoids the backslash
+doubling that `COPY ... TO STDOUT` causes):
 
 ```bash
-npm run migrate:offsets
+D=data_dump/$(date +%F); mkdir -p $D
+for t in offsets teams individuals team_members regions; do
+  psql -d flcf -At -c "SELECT row_to_json(t) FROM $t t" > $D/$t.json
+done
+psql -d flcf -At -c "SELECT row_to_json(t) FROM (SELECT id, created_at, email, first_name, name, zipcode FROM users) t" > $D/users.json
 ```
 
-### Option 2: Direct Node execution
+`data_dump/` is gitignored and excluded from deploys. Dumps contain donor names
+and emails — never commit them.
+
+## 2. Check it
 
 ```bash
-node scripts/migrateOffsetsToFirestore.js
+npm run migrate:all -- --dump data_dump/2026-09-27 --dry-run
 ```
 
-## What the Script Does
+Parses every row (aborts on any bad line), prints counts, totals and
+referential-integrity warnings. Writes nothing.
 
-1. **Reads** the `offsets.json` file line by line (JSONL format)
-2. **Validates** each JSON record
-3. **Transforms** the data to match Firestore schema:
-   - Converts snake_case to camelCase
-   - Converts ISO date strings to Date objects
-   - Handles null values properly
-   - Ensures correct data types
-4. **Batches** uploads (500 records per batch) for efficiency
-5. **Reports** progress and any errors
+## 3. Load it
 
-## Output
+Confirm `LGL_SYNC_ENABLED=false` in `functions/.env` is what's deployed, then:
 
-The script will display:
-
-- Number of records loaded
-- Sample of the original and transformed data
-- Progress updates as batches are uploaded
-- Final summary with success/error counts
-
-### Example Output:
-
-```
-Reading offsets from: /home/kinovate/sites/carbon-calculator/offsets.json
-Loaded 2661 offset records from file
-
-Sample record (before transformation):
-{
-  "id": 11964,
-  "user_id": 0,
-  "title": "",
-  ...
-}
-
-Sample record (after transformation):
-{
-  "id": 11964,
-  "userId": 0,
-  "title": "",
-  ...
-}
-
-Ready to upload 2661 records to Firestore collection 'offsets'
-Press Ctrl+C to cancel, or wait 5 seconds to continue...
-
-✓ Uploaded batch 1 (500 total records)
-✓ Uploaded batch 2 (1000 total records)
-✓ Uploaded batch 3 (1500 total records)
-...
-
-✅ Migration complete!
-   Successfully uploaded: 2661 records
-   Errors: 0
+```bash
+npm run migrate:all -- --dump data_dump/2026-09-27 --project flcf-f7cf1
 ```
 
-## Troubleshooting
+Deletes `offsets`, `teams`, `teamMembers`, `regions`, `users`, `cartItems`,
+reloads them, then verifies counts and pound/dollar totals against the dump.
+A report is written to `data_dump/reports/`. **Everything created on the new
+site since the last run is erased** — that is intentional before launch.
 
-### Firebase Connection Error
+## 4. Launch day
 
-- Verify all environment variables are correctly set
-- Check that your Firebase project is active
-- Ensure Firestore database is enabled in your Firebase project
+1. Put the old site in maintenance mode, take a final dump.
+2. `npm run migrate:all -- --dump <final> --project flcf-f7cf1 --final`
+   — `--final` locks the script so it can never wipe live data.
+3. Set `LGL_SYNC_ENABLED=true` in `functions/.env`, `firebase deploy --only functions`.
+4. Switch Stripe to live keys, then DNS.
 
-### File Not Found Error
+## What gets imported
 
-- Confirm `offsets.json` exists in the project root
-- Check file permissions
+| Old table | Firestore | Doc ID |
+|---|---|---|
+| offsets (purchased only) | `offsets` | `<id>` |
+| teams | `teams` (`isIndividual: false`) | `team-<id>` |
+| individuals | `teams` (`isIndividual: true`) | `ind-<id>` |
+| team_members | `teamMembers` | `<id>` |
+| regions | `regions` | `<id>` |
+| users (id, email, names, zip only) | `users` | `<id>` |
 
-### Parse Error
-
-- Verify the `offsets.json` file is in valid JSONL format
-- Each line must be a complete, valid JSON object
-
-### Rate Limiting
-
-- If you hit Firestore write limits, the script will report errors
-- Wait before retrying, or split the migration into smaller batches
-
-## Batch Processing Details
-
-- **Batch Size**: 500 records per Firestore batch
-- **Why Batching**: Firestore has a limit of 500 operations per batch write
-- **Performance**: Batching improves upload speed and reduces individual transaction overhead
-
-## Rollback
-
-To remove the uploaded data, you can:
-
-1. Delete the entire `offsets` collection from Firestore console
-2. Or selectively delete documents using Firestore GUI
-
-## Security Notes
-
-- The script requires valid Firebase credentials from your `.env` file
-- Never commit your `.env` file to version control
-- Ensure proper Firebase security rules are in place before migration
-
-## Data Verification
-
-After migration, verify the data in Firestore:
-
-1. Go to Firebase Console → Firestore
-2. Navigate to the `offsets` collection
-3. Sample a few documents to ensure data looks correct
-4. Check the document count matches: 2661 records
-
-## Support
-
-If you encounter issues:
-
-1. Check the error messages in console output
-2. Verify environment variables and Firebase setup
-3. Ensure `offsets.json` file format is correct
-4. Review Firebase security rules and permissions
+Every imported doc has `source: "legacy"`. Offsets also get `syncedToLGL: true`
+(the old site already sent them to Little Green Light) and `teamDocId`, the
+authoritative link to the team/individual — numeric legacy ids overlap between
+the two tables (2, 36, 70, 71, 73, 116), so `teamId` alone is ambiguous.

@@ -25,3 +25,6 @@ dist-ssr
 serviceAccountKey.json
 .env
 
+
+# Legacy database dumps contain donor PII — never commit
+data_dump/
