@@ -11,6 +11,33 @@ const SOURCE_STYLES = {
   legacy: "bg-gray-100 text-muted",
 };
 
+/** Clickable column header. Sorting happens server-side across all pages. */
+function SortHeader({ label, field, sort, onSort, align = "left" }) {
+  const active = sort.by === field;
+  return (
+    <th
+      scope="col"
+      aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}
+      className={`px-4 py-3 font-semibold ${align === "right" ? "text-right" : "text-left"}`}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(field)}
+        className={`group inline-flex items-center gap-1 cursor-pointer hover:text-text ${active ? "text-text" : ""}`}
+      >
+        {label}
+        <span
+          className={`material-icons transition-opacity ${active ? "opacity-100" : "opacity-0 group-hover:opacity-40"}`}
+          style={{ fontSize: "16px", lineHeight: 1 }}
+          aria-hidden="true"
+        >
+          {active && sort.dir === "asc" ? "arrow_upward" : "arrow_downward"}
+        </span>
+      </button>
+    </th>
+  );
+}
+
 /**
  * Ledger view. `kind` fixes the tab to "offset" or "donation".
  */
@@ -19,6 +46,7 @@ export default function TransactionsTab({ kind }) {
   const isDonations = kind === "donation";
   const [filters, setFilters] = useState({ source: "", search: "", from: "", to: "" });
   const [searchInput, setSearchInput] = useState("");
+  const [sort, setSort] = useState({ by: "date", dir: "desc" });
   const [page, setPage] = useState(1);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -32,7 +60,7 @@ export default function TransactionsTab({ kind }) {
       try {
         const res = await adminJson(
           getToken,
-          `/api/admin/transactions${qs({ kind, ...filters, page, pageSize: 50, refresh: refresh ? 1 : "" })}`
+          `/api/admin/transactions${qs({ kind, ...filters, sort: sort.by, dir: sort.dir, page, pageSize: 50, refresh: refresh ? 1 : "" })}`
         );
         setData(res);
         setError(null);
@@ -42,7 +70,7 @@ export default function TransactionsTab({ kind }) {
         setLoading(false);
       }
     },
-    [getToken, kind, filters, page]
+    [getToken, kind, filters, sort, page]
   );
 
   useEffect(() => {
@@ -63,9 +91,20 @@ export default function TransactionsTab({ kind }) {
     setPage(1);
   };
 
+  // Same column toggles direction; a new column starts descending, except for
+  // the text columns where A–Z is the more useful first click.
+  const toggleSort = (by) => {
+    setSort((s) =>
+      s.by === by
+        ? { by, dir: s.dir === "asc" ? "desc" : "asc" }
+        : { by, dir: ["name", "description", "source"].includes(by) ? "asc" : "desc" }
+    );
+    setPage(1);
+  };
+
   const exportCsv = async () => {
     try {
-      const res = await adminFetch(getToken, `/api/admin/transactions${qs({ kind, ...filters, format: "csv" })}`);
+      const res = await adminFetch(getToken, `/api/admin/transactions${qs({ kind, ...filters, sort: sort.by, dir: sort.dir, format: "csv" })}`);
       if (!res.ok) throw new Error(`Export failed (${res.status})`);
       const url = URL.createObjectURL(await res.blob());
       const a = document.createElement("a");
@@ -122,7 +161,7 @@ export default function TransactionsTab({ kind }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <Input
             type="search"
-            placeholder="Search name, email, team, note…"
+            placeholder="Search name, email, description, team, note…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             aria-label="Search"
@@ -152,12 +191,12 @@ export default function TransactionsTab({ kind }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-muted border-b border-border">
-              <th className="px-4 py-3 font-semibold">Date</th>
-              <th className="px-4 py-3 font-semibold">From</th>
-              <th className="px-4 py-3 font-semibold">Details</th>
-              <th className="px-4 py-3 font-semibold">Source</th>
-              {!isDonations && <th className="px-4 py-3 font-semibold text-right">CO₂</th>}
-              <th className="px-4 py-3 font-semibold text-right">Amount</th>
+              <SortHeader label="Date" field="date" sort={sort} onSort={toggleSort} />
+              <SortHeader label="From" field="name" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Details" field="description" sort={sort} onSort={toggleSort} />
+              <SortHeader label="Source" field="source" sort={sort} onSort={toggleSort} />
+              {!isDonations && <SortHeader label="CO₂" field="pounds" sort={sort} onSort={toggleSort} align="right" />}
+              <SortHeader label="Amount" field="cost" sort={sort} onSort={toggleSort} align="right" />
               <th className="px-4 py-3" />
             </tr>
           </thead>

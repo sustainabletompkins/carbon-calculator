@@ -7,11 +7,11 @@ import {
   deleteDoc,
   query,
   where,
-  getDoc,
   getDocs,
   updateDoc,
-  increment,
+  limit,
 } from "firebase/firestore";
+import { API_URL } from "./apiUrl";
 
 // Email is the identity key across carts, offsets, users and team lookups.
 // Firestore matches strings exactly, so always compare and store one spelling.
@@ -392,53 +392,63 @@ export const getTeamMembershipsByEmail = async (email) => {
 };
 
 /**
- * Attribute a completed purchase to a team — increments the team's pounds/count/dollars
- * and tags each offset record with the teamId.
- * @param {string} teamDocId - The teams document ID (teams and individuals share
- *   the collection and legacy numeric ids overlap, so the doc ID is the identity)
- * @param {number} carbonPounds - Total carbon pounds from this purchase
- * @param {number} dollars - Total dollar amount of the purchase
- * @param {Array<string>} offsetIds - Firestore offset document IDs to tag
- * @returns {Promise<void>}
+ * Resolve the teams document ID for a team's legacy numeric ID.
+ * Memberships written by the migration carry `teamDocId` directly; ones added
+ * through the admin UI only reference the team by `legacyId`, so they need
+ * this lookup before a purchase can be attributed.
+ * @param {number} legacyId - The team's legacyId
+ * @returns {Promise<string|null>} - The teams document ID, or null if unknown
  */
-export const attributeOffsetToTeam = async (
-  teamDocId,
-  carbonPounds,
-  dollars,
-  offsetIds = []
-) => {
+export const getTeamDocIdByLegacyId = async (legacyId) => {
+  if (legacyId === null || legacyId === undefined) return null;
   try {
     const db = getFirestore();
+    const teamsCollection = collection(db, "teams");
+    const q = query(
+      teamsCollection,
+      where("legacyId", "==", legacyId),
+      limit(1)
+    );
+    const querySnapshot = await getDocs(q);
+    return querySnapshot.empty ? null : querySnapshot.docs[0].id;
+  } catch (error) {
+    console.error("Error resolving team doc ID by legacy ID:", error);
+    return null;
+  }
+};
 
-    const teamDocRef = doc(db, "teams", teamDocId);
-    const teamSnap = await getDoc(teamDocRef);
-    const teamId = teamSnap.exists() ? teamSnap.data().legacyId ?? null : null;
+/**
+ * Attribute a completed purchase to a team or individual account.
+ *
+ * Offset records are admin-only for writes (firestore.rules), so this can't
+ * be done from the browser — POST /api/attribute-offset performs the write
+ * with admin credentials after verifying the payment with Stripe. It derives
+ * the pounds and dollars from the stored offset records itself.
+ *
+ * @param {string} teamDocId - The teams document ID (teams and individuals share
+ *   the collection and legacy numeric ids overlap, so the doc ID is the identity)
+ * @param {string} paymentIntentId - The Stripe payment intent for the purchase
+ * @returns {Promise<Object>} - { attributed, pounds, dollars }
+ */
+export const attributeOffsetToTeam = async (teamDocId, paymentIntentId) => {
+  try {
+    const response = await fetch(`${API_URL}/api/attribute-offset`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ teamDocId, paymentIntentId }),
+    });
 
-    if (teamSnap.exists()) {
-      await updateDoc(teamDocRef, {
-        pounds: increment(carbonPounds),
-        count: increment(1),
-        totalDollars: increment(dollars),
-        updatedAt: serverTimestamp(),
-      });
-    } else {
-      console.warn(`Team ${teamDocId} not found in Firestore`);
-      return;
-    }
-
-    // Tag each offset record with the team
-    for (const offsetDocId of offsetIds) {
-      const offsetRef = doc(db, "offsets", offsetDocId);
-      await updateDoc(offsetRef, {
-        teamDocId,
-        teamId,
-        updatedAt: serverTimestamp(),
-      });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(data.error || `Attribution failed (${response.status})`);
     }
 
     console.log(
-      `Attributed ${carbonPounds.toFixed(0)} lbs / $${dollars.toFixed(2)} to team ${teamDocId}`
+      `Attributed ${data.pounds?.toFixed(0)} lbs / $${data.dollars?.toFixed(
+        2
+      )} to ${teamDocId}`
     );
+    return data;
   } catch (error) {
     console.error("Error attributing offset to team:", error);
     throw error;

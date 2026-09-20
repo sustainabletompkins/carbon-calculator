@@ -438,6 +438,95 @@ app.post("/api/create-payment-intent", async (req, res) => {
   }
 });
 
+// Attribute a completed purchase to a team or individual account.
+//
+// Offset records are admin-only for writes (firestore.rules), so the browser
+// can't tag them itself. This runs the attribution with admin credentials
+// after checking the payment really succeeded, and derives the pounds and
+// dollars from the stored offset records rather than trusting the caller.
+app.post("/api/attribute-offset", async (req, res) => {
+  const paymentIntentId = String(req.body?.paymentIntentId || "").trim();
+  const teamDocId = String(req.body?.teamDocId || "").trim();
+
+  if (!paymentIntentId || !teamDocId) {
+    return res
+      .status(400)
+      .json({ error: "paymentIntentId and teamDocId are required" });
+  }
+
+  try {
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if (paymentIntent.status !== "succeeded") {
+      return res
+        .status(400)
+        .json({ error: `Payment has not succeeded (${paymentIntent.status})` });
+    }
+
+    const teamRef = db.collection("teams").doc(teamDocId);
+    const teamSnap = await teamRef.get();
+    if (!teamSnap.exists) {
+      return res.status(404).json({ error: "Account not found" });
+    }
+    const teamId = teamSnap.data().legacyId ?? null;
+
+    const offsetsSnap = await db
+      .collection("offsets")
+      .where("stripePaymentIntentId", "==", paymentIntentId)
+      .get();
+
+    if (offsetsSnap.empty) {
+      return res
+        .status(404)
+        .json({ error: "No offset records found for that payment" });
+    }
+
+    // Re-running an attribution must not double-count, so already-tagged
+    // records are left alone.
+    const pending = offsetsSnap.docs.filter((d) => !d.data().teamDocId);
+    if (pending.length === 0) {
+      return res.json({ attributed: 0, pounds: 0, dollars: 0 });
+    }
+
+    const pounds = pending.reduce(
+      (sum, d) => sum + (Number(d.data().carbonPounds) || 0),
+      0
+    );
+    const dollars = pending.reduce(
+      (sum, d) => sum + (Number(d.data().cost) || 0),
+      0
+    );
+
+    const batch = db.batch();
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    pending.forEach((d) => {
+      batch.update(d.ref, { teamDocId, teamId, updatedAt: now });
+    });
+    batch.update(teamRef, {
+      pounds: admin.firestore.FieldValue.increment(pounds),
+      count: admin.firestore.FieldValue.increment(1),
+      totalDollars: admin.firestore.FieldValue.increment(dollars),
+      updatedAt: now,
+    });
+    await batch.commit();
+
+    // Leaderboard and public API read through the cached ledger.
+    ledger.invalidate();
+
+    console.log(
+      `Attributed ${pounds.toFixed(0)} lbs / $${dollars.toFixed(
+        2
+      )} from ${paymentIntentId} to ${teamDocId}`
+    );
+    return res.json({ attributed: pending.length, pounds, dollars });
+  } catch (error) {
+    console.error("Error attributing offset:", error);
+    if (error?.type === "StripeInvalidRequestError") {
+      return res.status(400).json({ error: "Payment not found" });
+    }
+    return res.status(500).json({ error: "Failed to attribute offset" });
+  }
+});
+
 // Webhook endpoint for Stripe events
 app.post(
   "/api/webhooks/stripe",

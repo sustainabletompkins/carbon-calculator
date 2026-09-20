@@ -7,6 +7,7 @@ import {
   updateUserProfile,
   getTeamMembershipsByEmail,
   getIndividualAccountByEmail,
+  getTeamDocIdByLegacyId,
   attributeOffsetToTeam,
 } from "../utils/firestore";
 import TeamContributionModal from "./TeamContributionModal";
@@ -31,7 +32,7 @@ const StripeCheckout = ({
 
   // Team contribution state — populated after a successful payment
   const [teamPrompt, setTeamPrompt] = useState(null);
-  // { teams, totalPounds, totalDollars, offsetIds, paymentResult }
+  // { accounts, totalPounds, totalDollars, paymentIntentId, paymentResult }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -149,31 +150,38 @@ const StripeCheckout = ({
               getTeamMembershipsByEmail(userEmail),
             ]);
 
+            // Memberships added through the admin UI have no teamDocId, so
+            // resolve those from the team's legacyId. Without a doc ID there
+            // is nothing to attribute to, so those accounts are dropped
+            // rather than offered as a choice that can't be honoured.
+            const teamAccounts = (
+              await Promise.all(
+                memberships.map(async (m) => ({
+                  docId: m.teamDocId || (await getTeamDocIdByLegacyId(m.teamId)),
+                  name: m.teamName,
+                  isIndividual: false,
+                  pounds: null,
+                }))
+              )
+            ).filter((account) => {
+              if (account.docId) return true;
+              console.warn(
+                `Skipping team "${account.name}" for attribution: no team document found`
+              );
+              return false;
+            });
+
             // Build a normalised list of accounts the user can attribute to
             const accounts = [
               ...(individual
                 ? [{ docId: individual.id, name: individual.name, isIndividual: true, pounds: individual.pounds }]
                 : []),
-              ...memberships.map((m) => ({
-                docId: m.teamDocId,
-                name: m.teamName,
-                isIndividual: false,
-                pounds: null,
-              })),
+              ...teamAccounts,
             ];
 
             if (accounts.length === 1) {
               // Auto-attribute — no prompt needed
-              const totalPounds = cartItems.reduce(
-                (sum, item) => sum + (item.co2 ? item.co2 * 2.20462 : 0),
-                0
-              );
-              await attributeOffsetToTeam(
-                accounts[0].docId,
-                totalPounds,
-                totalAmount,
-                savedOffsetIds
-              );
+              await attributeOffsetToTeam(accounts[0].docId, paymentIntent.id);
             } else if (accounts.length > 1) {
               // Multiple options — let the user choose
               const totalPounds = cartItems.reduce(
@@ -184,7 +192,7 @@ const StripeCheckout = ({
                 accounts,
                 totalPounds,
                 totalDollars: totalAmount,
-                offsetIds: savedOffsetIds,
+                paymentIntentId: paymentIntent.id,
                 paymentResult,
               });
               return; // Hold until selection
@@ -209,12 +217,7 @@ const StripeCheckout = ({
   const handleTeamContribute = async (teamDocId) => {
     if (!teamPrompt) return;
     try {
-      await attributeOffsetToTeam(
-        teamDocId,
-        teamPrompt.totalPounds,
-        teamPrompt.totalDollars,
-        teamPrompt.offsetIds
-      );
+      await attributeOffsetToTeam(teamDocId, teamPrompt.paymentIntentId);
     } catch (err) {
       console.error("Error attributing offset to team:", err);
       // Don't block the success flow

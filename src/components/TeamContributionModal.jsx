@@ -8,16 +8,19 @@ const TeamContributionModal = ({
   onContribute,
   onSkip,
 }) => {
-  const [selectedId, setSelectedId] = useState(null);
+  // Tracked by position, not docId: ids have come through undefined or
+  // duplicated, which left every radio reading as checked and the choice
+  // impossible to change.
+  const [selectedIndex, setSelectedIndex] = useState(null);
   const [loading, setLoading] = useState(false);
   const [succeeded, setSucceeded] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
 
   const handleContribute = async () => {
-    if (selectedId === null) return;
-    const account = accounts.find((a) => a.docId === selectedId);
+    const account = accounts[selectedIndex];
+    if (!account?.docId) return;
     setLoading(true);
-    await onContribute(selectedId);
+    await onContribute(account.docId);
     setLoading(false);
     setSelectedAccount(account);
     setSucceeded(true);
@@ -99,11 +102,11 @@ const TeamContributionModal = ({
 
             {/* Account list */}
             <div className="space-y-2 mb-6">
-              {accounts.map((account) => (
+              {accounts.map((account, index) => (
                 <label
-                  key={account.docId}
+                  key={account.docId ?? index}
                   className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
-                    selectedId === account.docId
+                    selectedIndex === index
                       ? "border-primary bg-primary-tint shadow-sm"
                       : "border-gray-200 dark:border-gray-700 hover:border-primary/40 bg-white dark:bg-slate-800"
                   }`}
@@ -111,9 +114,9 @@ const TeamContributionModal = ({
                   <input
                     type="radio"
                     name="account"
-                    value={account.docId}
-                    checked={selectedId === account.docId}
-                    onChange={() => setSelectedId(account.docId)}
+                    value={index}
+                    checked={selectedIndex === index}
+                    onChange={() => setSelectedIndex(index)}
                     className="accent-green-600 flex-shrink-0"
                   />
                   <span
@@ -142,7 +145,7 @@ const TeamContributionModal = ({
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleContribute}
-                disabled={selectedId === null || loading}
+                disabled={!accounts[selectedIndex]?.docId || loading}
                 className="flex-1 inline-flex justify-center items-center gap-2 bg-primary hover:bg-primary-hover disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white py-3 px-4 rounded-xl font-semibold transition-colors disabled:cursor-not-allowed"
               >
                 <span className="material-icons text-sm">add_task</span>

@@ -58,6 +58,36 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
   const invalidate = ledger.invalidate;
   const loadTeamsByLegacyId = ledger.loadTeams;
 
+  // Columns the ledger table can be sorted by. getLedger() returns
+  // newest-first, which stays the default.
+  const SORT_FIELDS = {
+    date: (r) => r.date || "",
+    name: (r) => (r.name || r.email || "").toLowerCase(),
+    description: (r) => (r.description || "").toLowerCase(),
+    source: (r) => r.source,
+    pounds: (r) => r.pounds,
+    cost: (r) => r.cost,
+  };
+
+  function sortLedger(rows, sort, dir) {
+    const pick = SORT_FIELDS[sort];
+    if (!pick) return rows;
+    const sign = dir === "asc" ? 1 : -1;
+    const blank = (v) => v === "" || v === null || v === undefined;
+    return [...rows].sort((a, b) => {
+      const x = pick(a);
+      const y = pick(b);
+      // Keep blanks at the bottom whichever way the column is sorted.
+      if (blank(x) !== blank(y)) return blank(x) ? 1 : -1;
+      const cmp =
+        typeof x === "number" && typeof y === "number"
+          ? x - y
+          : String(x).localeCompare(String(y));
+      // Fall back to the newest-first default so equal values keep a stable order.
+      return cmp !== 0 ? cmp * sign : (b.date || "").localeCompare(a.date || "");
+    });
+  }
+
   function filterLedger(rows, q) {
     const kind = q.kind === "offset" || q.kind === "donation" ? q.kind : null;
     const source = ["website", "manual", "legacy"].includes(q.source) ? q.source : null;
@@ -192,7 +222,11 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
     "/transactions",
     wrap(async (req, res) => {
       const all = await getLedger(req.query.refresh === "1");
-      const filtered = filterLedger(all, req.query);
+      const filtered = sortLedger(
+        filterLedger(all, req.query),
+        req.query.sort,
+        req.query.dir === "asc" ? "asc" : "desc"
+      );
 
       if (req.query.format === "csv") {
         const cols = ["date", "kind", "source", "name", "email", "pounds", "cost", "paymentMethod", "teamName", "description", "note", "transactionId", "enteredBy", "id"];
