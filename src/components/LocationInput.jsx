@@ -96,10 +96,10 @@ const LocationInput = ({ setOrigin, setDestination }) => {
   }, [google, setOrigin, setDestination]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-2">
       <div>
         <label
-          className="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
+          className="block text-xs font-medium text-muted-light dark:text-muted-dark mb-0.5"
           htmlFor="start-location"
         >
           Starting Location
@@ -111,7 +111,7 @@ const LocationInput = ({ setOrigin, setDestination }) => {
       </div>
       <div>
         <label
-          className="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
+          className="block text-xs font-medium text-muted-light dark:text-muted-dark mb-0.5"
           htmlFor="end-location"
         >
           End Location

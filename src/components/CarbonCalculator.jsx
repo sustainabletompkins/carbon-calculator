@@ -3,6 +3,7 @@ import LocationInput from "./LocationInput";
 import useGoogleMaps from "../hooks/useGoogleMaps";
 import { computeRoute, getTravelMode } from "../utils/routesApi";
 import { CartContext } from "../contexts/CartContext";
+import { PageHeader } from "./ui";
 import AirCalculator from "./AirCalculator";
 import HomeCalculator from "./HomeCalculator";
 import QuickOffset from "./QuickOffset";
@@ -135,30 +136,20 @@ const CarCalculator = ({ setActiveTab }) => {
   };
 
   return (
-    <main className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
-      <div className="text-center mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-2 text-text-light dark:text-text-dark">
-          Car Travel Carbon Offset
-        </h2>
-        <p className="text-sm sm:text-base text-muted-light dark:text-muted-dark">
-          Calculate your carbon footprint from car travel
-        </p>
-      </div>
+    <main className="p-3 sm:p-4 max-w-6xl mx-auto">
+      <PageHeader
+        title="Car Travel Carbon Offset"
+        subtitle="Calculate your carbon footprint from car travel"
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-8 items-start">
-        <div className="bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-800 dark:to-gray-700 border-2 border-secondary/30 dark:border-gray-600 rounded-lg p-4 sm:p-6 shadow-md hover:shadow-lg transition-shadow">
-          <h2 className="text-lg font-semibold mb-4 text-center text-text-light dark:text-text-dark flex items-center justify-center gap-2">
-            <span className="material-icons text-primary">edit</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 items-start">
+        <div className="bg-gradient-to-br from-blue-50 to-green-50 dark:from-gray-800 dark:to-gray-700 border-2 border-secondary/30 dark:border-gray-600 rounded-lg p-3 shadow-md hover:shadow-lg transition-shadow">
+          <h2 className="text-sm font-semibold mb-2 text-center text-text-light dark:text-text-dark flex items-center justify-center gap-1.5">
+            <span className="material-icons text-primary text-base">edit</span>
             Option 1: Enter Mileage
           </h2>
-          <label
-            className="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
-            htmlFor="total-miles"
-          >
-            Enter your trip mileage
-          </label>
           <input
-            className="w-full bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark"
+            className="w-full bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark text-sm"
             id="total-miles"
             name="total-miles"
             placeholder="total miles"
@@ -167,52 +158,51 @@ const CarCalculator = ({ setActiveTab }) => {
             onChange={(e) => setManualMiles(e.target.value)}
           />
         </div>
-        <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 border-2 border-primary/30 dark:border-gray-600 rounded-lg p-4 sm:p-6 shadow-md hover:shadow-lg transition-shadow">
-          <h2 className="text-lg font-semibold mb-4 text-center text-text-light dark:text-text-dark flex items-center justify-center gap-2">
-            <span className="material-icons text-secondary">map</span>
+        <div className="bg-gradient-to-br from-green-50 to-blue-50 dark:from-gray-800 dark:to-gray-700 border-2 border-primary/30 dark:border-gray-600 rounded-lg p-3 shadow-md hover:shadow-lg transition-shadow">
+          <h2 className="text-sm font-semibold mb-2 text-center text-text-light dark:text-text-dark flex items-center justify-center gap-1.5">
+            <span className="material-icons text-secondary text-base">map</span>
             Option 2: Calculate Mileage
           </h2>
-          <div className="grid grid-cols-1 gap-6">
-            <LocationInput
-              setOrigin={setOrigin}
-              setDestination={setDestination}
-            />
-          </div>
+          <LocationInput
+            setOrigin={setOrigin}
+            setDestination={setDestination}
+          />
         </div>
       </div>
-      <div className="mt-6 sm:mt-8">
-        <label
-          className="block text-sm font-medium text-muted-light dark:text-muted-dark mb-1"
-          htmlFor="car-mpg"
-        >
-          Car mpg (optional)
+
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <label
+            className="text-sm font-medium text-muted-light dark:text-muted-dark whitespace-nowrap"
+            htmlFor="car-mpg"
+          >
+            Car mpg:
+          </label>
+          <input
+            className="w-20 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark text-sm"
+            id="car-mpg"
+            name="car-mpg"
+            type="text"
+            value={carMpg}
+            onChange={(e) => setCarMpg(e.target.value)}
+          />
+        </div>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input
+            className="h-4 w-4 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded"
+            id="round-trip"
+            name="round-trip"
+            type="checkbox"
+            checked={isRoundTrip}
+            onChange={(e) => setIsRoundTrip(e.target.checked)}
+          />
+          <span className="text-sm font-medium text-text-light dark:text-text-dark">
+            Round trip?
+          </span>
         </label>
-        <input
-          className="w-full md:w-1/2 bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-primary focus:border-primary text-text-light dark:text-text-dark"
-          id="car-mpg"
-          name="car-mpg"
-          type="text"
-          value={carMpg}
-          onChange={(e) => setCarMpg(e.target.value)}
-        />
       </div>
-      <div className="mt-4 sm:mt-6 bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border-2 border-green-300 dark:border-green-700 flex items-center gap-3">
-        <input
-          className="h-5 w-5 text-primary focus:ring-primary border-gray-300 dark:border-gray-600 rounded"
-          id="round-trip"
-          name="round-trip"
-          type="checkbox"
-          checked={isRoundTrip}
-          onChange={(e) => setIsRoundTrip(e.target.checked)}
-        />
-        <label
-          className="block text-base font-medium text-text-light dark:text-text-dark cursor-pointer"
-          htmlFor="round-trip"
-        >
-          Round trip?
-        </label>
-      </div>
-      <div className="mt-6 sm:mt-8 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+
+      <div className="mt-3 flex flex-col items-center gap-3">
         <button
           className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border-2 border-transparent text-base font-semibold rounded-lg shadow-md text-white bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200"
           type="button"
@@ -233,7 +223,7 @@ const CarCalculator = ({ setActiveTab }) => {
             </>
           )}
         </button>
-        <p className="text-sm text-muted-light dark:text-muted-dark text-center sm:text-right">
+        <p className="text-xs text-muted-light dark:text-muted-dark text-center">
           Or, send check to Sustainable Finger Lakes / 309 N Aurora / Ithaca, NY
           14850 with 'FLCF' in memo line
         </p>
@@ -265,7 +255,7 @@ const CarbonCalculator = () => {
       <div className="bg-gradient-to-r from-secondary/20 to-primary/20 border-b-2 border-secondary/30 dark:border-gray-700">
         <nav
           aria-label="Tabs"
-          className="-mb-px flex justify-center space-x-4 sm:space-x-8 px-2"
+          className="-mb-px flex"
         >
           {visibleTabs.map((tab) => (
             <button
@@ -275,14 +265,14 @@ const CarbonCalculator = () => {
                 activeTab === tab.id
                   ? "border-primary text-primary bg-white/80 dark:bg-gray-800/80"
                   : "border-transparent text-gray-600 hover:text-primary hover:border-primary/50 hover:bg-white/40 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500"
-              } whitespace-nowrap py-3 sm:py-4 px-3 sm:px-4 border-b-2 font-medium text-xs sm:text-sm flex items-center relative transition-all duration-200 rounded-t-lg`}
+              } flex-1 py-2 sm:py-3 px-1 sm:px-3 border-b-2 font-medium text-xs flex items-center justify-center relative transition-all duration-200 rounded-t-lg`}
             >
-              <span className="material-icons mr-1 sm:mr-2 text-base sm:text-xl">
+              <span className="material-icons text-lg sm:text-xl md:mr-1.5">
                 {tab.icon}
-              </span>{" "}
-              <span className="hidden sm:inline">{tab.label}</span>
+              </span>
+              <span className="hidden md:inline">{tab.label}</span>
               {tab.id === "cart" && cart.length > 0 && (
-                <span className="ml-1 sm:ml-2 bg-accent text-white text-xs font-bold rounded-full h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center animate-pulse">
+                <span className="ml-1 bg-accent text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center animate-pulse">
                   {cart.length}
                 </span>
               )}

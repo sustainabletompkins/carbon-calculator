@@ -1,5 +1,6 @@
 import { useState, useContext } from "react";
 import { CartContext } from "../contexts/CartContext";
+import { PageHeader } from "./ui";
 
 const HomeCalculator = ({ setActiveTab }) => {
   const [propane, setPropane] = useState("");
@@ -81,15 +82,11 @@ const HomeCalculator = ({ setActiveTab }) => {
   };
 
   return (
-    <main className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
-      <div className="text-center mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-2 text-text-light dark:text-text-dark">
-          Home Energy Carbon Offset
-        </h2>
-        <p className="text-sm sm:text-base text-muted-light dark:text-muted-dark">
-          Calculate your carbon footprint from home energy usage
-        </p>
-      </div>
+    <main className="p-3 sm:p-4 max-w-6xl mx-auto">
+      <PageHeader
+        title="Home Energy Carbon Offset"
+        subtitle="Calculate your carbon footprint from home energy usage"
+      />
 
       <div className="mb-6 sm:mb-8">
         <h3 className="text-lg font-semibold mb-4 text-center text-text-light dark:text-text-dark">
@@ -221,7 +218,7 @@ const HomeCalculator = ({ setActiveTab }) => {
         </div>
       </div>
 
-      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6 flex flex-col items-center gap-4">
         <button
           className="w-full sm:w-auto inline-flex justify-center items-center px-6 py-3 border-2 border-transparent text-base font-semibold rounded-lg shadow-md text-white bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-secondary disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-200"
           type="button"
@@ -240,7 +237,7 @@ const HomeCalculator = ({ setActiveTab }) => {
             </>
           )}
         </button>
-        <p className="text-sm text-muted-light dark:text-muted-dark text-center sm:text-right">
+        <p className="text-sm text-muted-light dark:text-muted-dark text-center">
           Or, send check to Sustainable Finger Lakes / 309 N Aurora / Ithaca, NY
           14850 with 'FLCF' in memo line
         </p>

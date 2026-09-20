@@ -1,6 +1,54 @@
 import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../contexts/CartContext";
 import StripeCheckout from "./StripeCheckout";
+import { PageHeader } from "./ui";
+
+const ITEM_LABELS = {
+  car: "Car Trip",
+  air: "Air Travel",
+  home: "Home Energy",
+  quick: "Quick Offset",
+};
+
+const ITEM_ICONS = {
+  car: "directions_car",
+  air: "flight",
+  home: "home",
+  quick: "flash_on",
+};
+
+// Reduce a cart item to the one line a receipt row can show.
+const describeItem = (item) => {
+  if (item.type === "donation") {
+    return {
+      icon: "favorite",
+      title: "Direct Donation",
+      detail: "Supports environmental initiatives",
+      meta: [],
+    };
+  }
+
+  const title = ITEM_LABELS[item.tripMode] || "Offset";
+  // Calculators that aren't trips repeat their name in `origin`, so only the
+  // origin → destination pairs are worth showing as a route.
+  const detail =
+    item.destination && item.origin !== title
+      ? `${item.origin} → ${item.destination}`
+      : item.destination || item.origin || "";
+
+  const meta = [];
+  if (item.distance > 0) {
+    meta.push(
+      `${item.distance.toLocaleString(undefined, {
+        maximumFractionDigits: 1,
+      })} mi`
+    );
+  }
+  if (item.co2 > 0) meta.push(`${item.co2.toFixed(2)} kg CO2`);
+  if (item.travelers > 1) meta.push(`${item.travelers} travelers`);
+
+  return { icon: ITEM_ICONS[item.tripMode] || "eco", title, detail, meta };
+};
 
 const Cart = ({ setActiveTab, onPaymentSuccess }) => {
   const {
@@ -87,10 +135,11 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
   };
 
   return (
-    <main className="p-4 sm:p-6 md:p-8 max-w-6xl mx-auto">
-      <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 text-center">
-        Your Carbon Offset Cart
-      </h2>
+    <main className="p-3 sm:p-4 max-w-6xl mx-auto">
+      <PageHeader
+        title="Your Carbon Offset Cart"
+        subtitle="Review your offsets and complete your contribution"
+      />
 
       {cart.length === 0 ? (
         <div>
@@ -152,154 +201,81 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
               </button>
             </div>
           </div>
-
-          {/* Call to Action for Adding More */}
-          <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
-            <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-lg p-4 sm:p-6 border border-green-200 dark:border-green-800">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <span className="material-icons text-primary text-2xl sm:text-3xl">
-                  info
-                </span>
-                <div className="flex-1">
-                  <h3 className="font-semibold text-sm sm:text-base text-text-light dark:text-text-dark mb-2">
-                    Want to offset your carbon footprint?
-                  </h3>
-                  <p className="text-sm text-muted-light dark:text-muted-dark mb-4">
-                    Calculate and add offsets for your trips and activities to
-                    maximize your positive impact on the environment.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={() => setActiveTab("car")}
-                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                    >
-                      <span className="material-icons text-sm">
-                        directions_car
-                      </span>
-                      Add Car Trip
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("air")}
-                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                    >
-                      <span className="material-icons text-sm">flight</span>
-                      Add Flight
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("home")}
-                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                    >
-                      <span className="material-icons text-sm">home</span>
-                      Add Home Energy
-                    </button>
-                    <button
-                      onClick={() => setActiveTab("quick")}
-                      className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                    >
-                      <span className="material-icons text-sm">flash_on</span>
-                      Quick Offset
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       ) : (
         <div>
-          <div className="space-y-3 sm:space-y-4 mb-4 sm:mb-6">
-            {cart.map((item, index) => (
-              <div
-                key={index}
-                className="bg-gray-50 dark:bg-gray-800 p-3 sm:p-4 rounded-lg border border-gray-200 dark:border-gray-700"
-              >
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="material-icons text-primary text-sm">
-                        {item.type === "donation"
-                          ? "favorite"
-                          : item.tripMode === "car"
-                          ? "directions_car"
-                          : item.tripMode === "air"
-                          ? "flight"
-                          : "home"}
-                      </span>
-                      <p className="font-semibold text-text-light dark:text-text-dark">
-                        {item.type === "donation"
-                          ? "Direct Donation"
-                          : item.tripMode === "car"
-                          ? "Car Trip"
-                          : item.tripMode === "air"
-                          ? "Air Travel"
-                          : "Offset"}
-                      </p>
-                    </div>
-                    {item.origin && (
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        {item.origin}{" "}
-                        {item.destination && `→ ${item.destination}`}
-                      </p>
-                    )}
-                    {item.type === "donation" ? (
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Contribution to support environmental initiatives
-                      </p>
-                    ) : (
-                      <div className="flex gap-4 mt-2 text-xs text-muted-light dark:text-muted-dark">
-                        <span>{item.distance.toFixed(2)} miles</span>
-                        <span>•</span>
-                        <span>{item.co2.toFixed(2)} kg CO2</span>
-                        {item.travelers && item.travelers > 1 && (
-                          <>
-                            <span>•</span>
-                            <span>{item.travelers} travelers</span>
-                          </>
+          {/* Line Items + Total */}
+          <div className="mb-3 overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
+              {cart.map((item, index) => {
+                const { icon, title, detail, meta } = describeItem(item);
+                return (
+                  <li
+                    key={index}
+                    className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5"
+                  >
+                    <span
+                      className="material-icons shrink-0 text-primary"
+                      style={{ fontSize: "20px" }}
+                    >
+                      {icon}
+                    </span>
+                    <div className="min-w-0 flex-1 text-left">
+                      {/* Detail sits beside the title on wide rows, under it
+                          on narrow ones so long routes stay readable. */}
+                      <p className="text-sm font-semibold text-text-light dark:text-text-dark sm:truncate">
+                        {title}
+                        {detail && (
+                          <span className="block text-xs font-normal text-muted-light dark:text-muted-dark sm:ml-2 sm:inline sm:text-sm">
+                            {detail}
+                          </span>
                         )}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <p className="font-bold text-primary text-lg">
+                      </p>
+                      {meta.length > 0 && (
+                        <p className="text-xs text-muted-light dark:text-muted-dark">
+                          {meta.join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                    <p className="shrink-0 font-semibold tabular-nums text-primary">
                       ${item.cost.toFixed(2)}
                     </p>
                     <button
                       onClick={() => removeFromCart(index)}
-                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                      aria-label={`Remove ${title}`}
+                      className="shrink-0 text-gray-400 hover:text-red-600 dark:text-gray-500 dark:hover:text-red-400 transition-colors"
                     >
-                      <span className="material-icons text-sm">delete</span>
+                      <span
+                        className="material-icons"
+                        style={{ fontSize: "18px" }}
+                      >
+                        delete
+                      </span>
                     </button>
-                  </div>
-                </div>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="flex items-center justify-between gap-3 border-t border-gray-200 dark:border-gray-700 bg-primary/10 dark:bg-primary/20 px-3 sm:px-4 py-3">
+              <div className="text-left">
+                <p className="text-sm font-semibold text-text-light dark:text-text-dark">
+                  Total
+                </p>
+                <p className="text-xs text-muted-light dark:text-muted-dark">
+                  {totalCo2.toFixed(2)} kg CO2 to offset
+                </p>
               </div>
-            ))}
+              <p className="text-xl sm:text-2xl font-bold tabular-nums text-primary">
+                ${totalCost.toFixed(2)}
+              </p>
+            </div>
           </div>
 
-          {/* Summary Section */}
-          <div className="bg-primary/10 dark:bg-primary/20 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <p className="text-sm text-muted-light dark:text-muted-dark mb-1">
-                  Total CO2 to Offset
-                </p>
-                <p className="text-2xl font-bold text-primary">
-                  {totalCo2.toFixed(2)} kg
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-light dark:text-muted-dark mb-1">
-                  Total Cost
-                </p>
-                <p className="text-3xl font-bold text-primary">
-                  ${totalCost.toFixed(2)}
-                </p>
-              </div>
-            </div>
-            <p className="text-xs text-center text-muted-light dark:text-muted-dark">
-              Your contribution helps fund sustainable projects and reduce
-              global emissions
-            </p>
-          </div>
+          <p className="mb-4 sm:mb-6 text-center text-xs text-muted-light dark:text-muted-dark">
+            Your contribution helps fund sustainable projects and reduce global
+            emissions
+          </p>
 
           {/* User Information Section */}
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 sm:p-6 mb-4 sm:mb-6 border border-blue-200 dark:border-blue-800">
@@ -395,11 +371,14 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
             </span>
             <div className="flex-1">
               <h3 className="font-semibold text-sm sm:text-base text-text-light dark:text-text-dark mb-2">
-                Want to offset more of your carbon footprint?
+                {cart.length === 0
+                  ? "Want to offset your carbon footprint?"
+                  : "Want to offset more of your carbon footprint?"}
               </h3>
               <p className="text-sm text-muted-light dark:text-muted-dark mb-4">
-                Add offsets for all your trips and activities to maximize your
-                positive impact on the environment.
+                {cart.length === 0
+                  ? "Calculate and add offsets for your trips and activities to maximize your positive impact on the environment."
+                  : "Add offsets for all your trips and activities to maximize your positive impact on the environment."}
               </p>
               <div className="flex flex-wrap gap-2">
                 <button

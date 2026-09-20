@@ -7,10 +7,23 @@ import {
 
 export const CartContext = createContext();
 
+const CART_EXPIRY_DAYS = 7;
+
+const isStaleCartItem = (item) => {
+  if (!item.createdAt) return false;
+  const created = item.createdAt.toDate
+    ? item.createdAt.toDate()
+    : new Date(item.createdAt);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - CART_EXPIRY_DAYS);
+  return created < cutoff;
+};
+
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState([]);
   const [userEmail, setUserEmail] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [toastItem, setToastItem] = useState(null);
 
   // Initialize cart from localStorage or Firestore
   useEffect(() => {
@@ -37,7 +50,14 @@ export const CartProvider = ({ children }) => {
       setLoading(true);
       const firestoreCartItems = await getUserCartItems(email);
 
-      const firestoreCart = firestoreCartItems.map((item) => ({
+      // Silently delete stale items (older than CART_EXPIRY_DAYS) from Firestore
+      const staleItems = firestoreCartItems.filter(isStaleCartItem);
+      staleItems.forEach((item) => {
+        if (item.id) deleteCartItem(item.id).catch(console.error);
+      });
+
+      const freshItems = firestoreCartItems.filter((item) => !isStaleCartItem(item));
+      const firestoreCart = freshItems.map((item) => ({
         ...item,
         co2: item.co2 || 0,
       }));
@@ -60,7 +80,8 @@ export const CartProvider = ({ children }) => {
 
         const merged = [...firestoreCart, ...localOnlyItems];
         console.log(
-          `Loaded ${firestoreCart.length} Firestore + ${localOnlyItems.length} local items for ${email}`
+          `Loaded ${firestoreCart.length} Firestore + ${localOnlyItems.length} local items for ${email}` +
+          (staleItems.length ? ` (deleted ${staleItems.length} stale)` : "")
         );
         return merged;
       });
@@ -85,10 +106,11 @@ export const CartProvider = ({ children }) => {
         }
 
         setCart((prevCart) => [...prevCart, newItem]);
+        setToastItem({ ...newItem, _key: Date.now() });
       } catch (error) {
         console.error("Error adding item to cart:", error);
-        // Still add to local cart even if Firestore fails
         setCart((prevCart) => [...prevCart, item]);
+        setToastItem({ ...item, _key: Date.now() });
       }
     },
     [userEmail]
@@ -136,6 +158,7 @@ export const CartProvider = ({ children }) => {
         userEmail,
         setUserEmail: setUserEmailContext,
         loading,
+        toastItem,
       }}
     >
       {children}

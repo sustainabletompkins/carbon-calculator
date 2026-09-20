@@ -1,5 +1,8 @@
 import { useState, useContext } from "react";
 import { CartContext } from "../contexts/CartContext";
+import { InfoPopover, PageHeader } from "./ui";
+
+const COST_PER_KG = 0.01;
 
 const QuickOffset = ({ setActiveTab }) => {
   const [offsetType, setOffsetType] = useState("");
@@ -12,6 +15,8 @@ const QuickOffset = ({ setActiveTab }) => {
       label: "Home Energy",
       icon: "home",
       description: "Average US household energy consumption",
+      methodology:
+        "Based on an average US household using ~11,000 kWh of electricity and ~400 therms of natural gas annually.",
       emissions: {
         year: 7200, // kg CO2 per year (average US home)
         quarter: 1800, // kg CO2 per quarter
@@ -22,6 +27,8 @@ const QuickOffset = ({ setActiveTab }) => {
       label: "Car Travel",
       icon: "directions_car",
       description: "Average US driver annual mileage (~13,500 miles/year)",
+      methodology:
+        "Based on an average US driver traveling 13,500 miles a year at average vehicle emissions of 404g CO2 per mile.",
       emissions: {
         year: 5454, // kg CO2 per year (13,500 miles * 0.404 kg/mile)
         quarter: 1364, // kg CO2 per quarter
@@ -32,6 +39,8 @@ const QuickOffset = ({ setActiveTab }) => {
       label: "Air Travel",
       icon: "flight",
       description: "Average US air traveler (2-3 round trips per year)",
+      methodology:
+        "Based on an average US traveler taking 2-3 domestic round-trip flights a year.",
       emissions: {
         year: 1200, // kg CO2 per year (avg 2-3 flights)
         quarter: 300, // kg CO2 per quarter
@@ -40,10 +49,7 @@ const QuickOffset = ({ setActiveTab }) => {
     },
   };
 
-  const calculateCost = (co2) => {
-    const costPerKg = 0.01;
-    return co2 * costPerKg;
-  };
+  const calculateCost = (co2) => co2 * COST_PER_KG;
 
   const handleCalculate = () => {
     if (!offsetType) {
@@ -80,15 +86,11 @@ const QuickOffset = ({ setActiveTab }) => {
   const estimatedCost = estimatedCo2 ? calculateCost(estimatedCo2) : 0;
 
   return (
-    <main className="p-4 sm:p-6 md:p-8 max-w-4xl mx-auto">
-      <div className="text-center mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-semibold mb-2 text-text-light dark:text-text-dark">
-          Quick Carbon Offset
-        </h2>
-        <p className="text-sm sm:text-base text-muted-light dark:text-muted-dark">
-          Offset your carbon footprint using US average consumption data
-        </p>
-      </div>
+    <main className="p-3 sm:p-4 max-w-4xl mx-auto">
+      <PageHeader
+        title="Quick Carbon Offset"
+        subtitle="Offset your carbon footprint using US average consumption data"
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 mb-6 sm:mb-8">
         {/* What to Offset */}
@@ -132,19 +134,6 @@ const QuickOffset = ({ setActiveTab }) => {
             <option value="quarter">Quarter (3 months)</option>
             <option value="month">Month</option>
           </select>
-
-          {/* Time period info */}
-          <div className="mt-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-2">
-              <span className="material-icons text-blue-600 dark:text-blue-400 text-sm">
-                info
-              </span>
-              <p className="text-xs text-gray-700 dark:text-gray-300">
-                Select the time period you want to offset. Calculations are
-                based on US national averages.
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -180,40 +169,39 @@ const QuickOffset = ({ setActiveTab }) => {
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-3">
-                Per{" "}
-                {timePeriod === "year"
-                  ? "year"
-                  : timePeriod === "quarter"
-                  ? "quarter (3 months)"
-                  : "month"}
-              </p>
+              <div className="mt-3 flex items-center justify-between gap-2">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Per{" "}
+                  {timePeriod === "year"
+                    ? "year"
+                    : timePeriod === "quarter"
+                    ? "quarter (3 months)"
+                    : "month"}
+                </p>
+                <InfoPopover
+                  label="How we calculate"
+                  className="shrink-0"
+                  title={`How we estimate ${selectedOption.label.toLowerCase()}`}
+                >
+                  <p>{selectedOption.methodology}</p>
+                  {timePeriod !== "year" && (
+                    <p>
+                      A {timePeriod === "quarter" ? "quarter" : "month"} is that
+                      annual estimate divided by{" "}
+                      {timePeriod === "quarter" ? "4" : "12"}.
+                    </p>
+                  )}
+                  <p>
+                    Offset cost is ${COST_PER_KG.toFixed(2)} per kg of CO2, so{" "}
+                    {estimatedCo2.toLocaleString()} kg costs $
+                    {estimatedCost.toFixed(2)}.
+                  </p>
+                </InfoPopover>
+              </div>
             </div>
           </div>
         </div>
       )}
-
-      {/* Information Panel */}
-      <div className="mb-6 sm:mb-8 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 sm:p-6 border border-gray-200 dark:border-gray-700">
-        <h4 className="font-semibold text-text-light dark:text-text-dark mb-3 flex items-center gap-2">
-          <span className="material-icons text-primary">calculate</span>
-          How We Calculate
-        </h4>
-        <div className="space-y-2 text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-          <p>
-            <strong>Home Energy:</strong> Based on average US household using
-            ~11,000 kWh electricity and ~400 therms natural gas annually
-          </p>
-          <p>
-            <strong>Car Travel:</strong> Based on average US driver traveling
-            13,500 miles/year with average vehicle emissions of 404g CO2/mile
-          </p>
-          <p>
-            <strong>Air Travel:</strong> Based on average US traveler taking 2-3
-            domestic round-trip flights per year
-          </p>
-        </div>
-      </div>
 
       {/* Calculate Button */}
       <div className="border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6 flex flex-col items-center gap-4">
