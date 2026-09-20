@@ -1,11 +1,36 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import CarbonCalculator from "./components/CarbonCalculator";
 import Leaderboard from "./components/Leaderboard";
 import FirestoreTest from "./components/FirestoreTest";
+import { CartToast } from "./components/ui/CartToast";
+import AdminPage from "./components/admin/AdminPage";
+import { useAuth } from "./contexts/AuthContext";
+
+const PAGES = ["calculator", "leaderboard", "test", "admin"];
+
+function pageFromPath() {
+  const slug = window.location.pathname.replace(/^\/+|\/+$/g, "");
+  return PAGES.includes(slug) ? slug : "calculator";
+}
 
 function App() {
-  const [currentPage, setCurrentPage] = useState("calculator");
+  const [currentPage, setCurrentPageState] = useState(pageFromPath);
+  const { isAdmin } = useAuth();
+
+  // Keep the URL in sync so /admin is linkable and survives reloads.
+  const setCurrentPage = (page) => {
+    setCurrentPageState(page);
+    const path = page === "calculator" ? "/" : `/${page}`;
+    if (window.location.pathname !== path)
+      window.history.pushState({}, "", path);
+  };
+
+  useEffect(() => {
+    const onPop = () => setCurrentPageState(pageFromPath());
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   return (
     <div className="w-full min-h-screen bg-background-light dark:bg-background-dark font-display text-text-light dark:text-text-dark overflow-auto">
@@ -37,16 +62,19 @@ function App() {
               >
                 Leaderboard
               </button>
-              <button
-                onClick={() => setCurrentPage("test")}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  currentPage === "test"
-                    ? "bg-green-600 text-white"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
-                }`}
-              >
-                Firestore Test
-              </button>
+
+              {isAdmin && (
+                <button
+                  onClick={() => setCurrentPage("admin")}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    currentPage === "admin"
+                      ? "bg-green-600 text-white"
+                      : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+                  }`}
+                >
+                  Admin
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -57,7 +85,10 @@ function App() {
         {currentPage === "calculator" && <CarbonCalculator />}
         {currentPage === "leaderboard" && <Leaderboard />}
         {currentPage === "test" && <FirestoreTest />}
+        {currentPage === "admin" && <AdminPage />}
       </div>
+
+      <CartToast />
     </div>
   );
 }

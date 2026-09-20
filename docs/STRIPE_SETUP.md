@@ -48,7 +48,7 @@ Your `.env` file should already have:
 
 ```
 VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
-VITE_STRIPE_SECRET_KEY=sk_test_...
+STRIPE_SECRET_KEY=sk_test_...   # server-only, no VITE_ prefix
 VITE_API_URL=http://localhost:3000
 ```
 
@@ -168,7 +168,7 @@ To receive real-time payment events:
 
 ### Payment Fails with "API key not found"
 
-- Verify `VITE_STRIPE_SECRET_KEY` is set in `.env`
+- Verify `STRIPE_SECRET_KEY` is set in `.env`
 - Restart the server: `npm run server`
 
 ### CORS Error
@@ -203,7 +203,7 @@ Before going live:
 
 ⚠️ **Important Security Reminders:**
 
-- Never expose `VITE_STRIPE_SECRET_KEY` in frontend code
+- Never prefix the secret key or webhook secret with `VITE_` — Vite bundles every `VITE_*` variable into the public browser build
 - The backend server keeps secret key safe
 - Always validate amounts on the backend
 - Implement proper authentication for payment endpoints

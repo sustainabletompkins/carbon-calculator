@@ -7,6 +7,9 @@ import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 import admin from "firebase-admin";
+import { createAdminRouter } from "./adminRoutes.js";
+import { createPublicRouter } from "./publicRoutes.js";
+import { createLedger } from "./lib/ledger.js";
 
 dotenv.config();
 
@@ -45,13 +48,71 @@ const REGION_NAMES = fs.existsSync(regionsPath)
   : {};
 
 const app = express();
-const stripe = new Stripe(process.env.VITE_STRIPE_SECRET_KEY);
+// Server-only secrets. These must NOT use the VITE_ prefix — Vite bundles any
+// VITE_* variable into the public browser build.
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+if (!STRIPE_SECRET_KEY) {
+  console.error("❌ STRIPE_SECRET_KEY is not set. Add it to .env (server-only, no VITE_ prefix).");
+}
+const stripe = new Stripe(STRIPE_SECRET_KEY);
+
+// ─── Admin auth middleware ───────────────────────────────────────────────────
+// Verifies a Firebase ID token from `Authorization: Bearer <token>` and
+// requires the `admin` custom claim (see scripts/setAdminClaim.js).
+async function requireAdmin(req, res, next) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: "Missing auth token" });
+  try {
+    // checkRevoked=true so revoked admins are locked out immediately.
+    const decoded = await admin.auth().verifyIdToken(token, true);
+    if (decoded.admin !== true) {
+      return res.status(403).json({ error: "Admin access required" });
+    }
+    req.user = decoded;
+    return next();
+  } catch (err) {
+    console.warn("Auth token rejected:", err.code || err.message);
+    return res.status(401).json({ error: "Invalid or expired auth token" });
+  }
+}
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
+
+// One normalised view of the `offsets` collection, shared by the admin and
+// public APIs so an admin edit clears both caches (lib/ledger.js).
+const ledger = createLedger({ db });
+
+// ─── Public API (no auth) — see publicRoutes.js and docs/PUBLIC_API.md ───────
+// Read-only aggregates for fingerlakesclimatefund.org and any other site the
+// fund puts these numbers on. PUBLIC_API_ORIGINS restricts which sites the
+// browser will let call it; unset means any origin, which is the sensible
+// default for data that is already public on the leaderboard.
+const PUBLIC_API_ORIGINS = (process.env.PUBLIC_API_ORIGINS || "")
+  .split(",")
+  .map((o) => o.trim().replace(/\/+$/, ""))
+  .filter(Boolean);
+const PUBLIC_API_CACHE_SECONDS = parseInt(process.env.PUBLIC_API_CACHE_SECONDS, 10) || 300;
+
+app.use(
+  "/api/public",
+  cors({
+    origin: PUBLIC_API_ORIGINS.length ? PUBLIC_API_ORIGINS : "*",
+    methods: ["GET", "OPTIONS"],
+    maxAge: 86400,
+  }),
+  createPublicRouter({
+    db,
+    ledger,
+    regionNames: REGION_NAMES,
+    cacheSeconds: PUBLIC_API_CACHE_SECONDS,
+  })
+);
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -310,6 +371,9 @@ app.get("/api/team-funding", (req, res) => {
   res.json(teamFundingData);
 });
 
+// ─── Admin API (all behind requireAdmin) — see adminRoutes.js ───────────────
+app.use("/api/admin", requireAdmin, createAdminRouter({ db, ledger, regionNames: REGION_NAMES }));
+
 // Payment endpoint
 app.post("/api/payment", async (req, res) => {
   try {
@@ -380,7 +444,7 @@ app.post(
   express.raw({ type: "application/json" }),
   async (req, res) => {
     const sig = req.headers["stripe-signature"];
-    const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const endpointSecret = STRIPE_WEBHOOK_SECRET;
 
     try {
       const event = stripe.webhooks.constructEvent(
@@ -432,7 +496,12 @@ app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
   console.log(
     `💳 Stripe Secret Key configured: ${
-      process.env.VITE_STRIPE_SECRET_KEY ? "✓" : "✗"
+      STRIPE_SECRET_KEY ? "✓" : "✗"
     }`
+  );
+  console.log(
+    `🌐 Public API at /api/public — origins: ${
+      PUBLIC_API_ORIGINS.length ? PUBLIC_API_ORIGINS.join(", ") : "any"
+    }, cache ${PUBLIC_API_CACHE_SECONDS}s`
   );
 });

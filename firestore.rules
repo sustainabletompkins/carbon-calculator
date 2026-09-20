@@ -2,6 +2,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Admins are Firebase Auth users carrying the `admin` custom claim,
+    // set via `npm run admin:grant -- <email>` (scripts/setAdminClaim.js).
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+
     // Cart items: allow unauthenticated users to read/write their own items by email
     match /cartItems/{cartItemId} {
       allow read, write: if true;
@@ -10,7 +16,9 @@ service cloud.firestore {
     // Offsets: public read, allow client writes for saving purchase records
     match /offsets/{offsetId} {
       allow read: if true;
-      allow write: if true;
+      allow create: if true;
+      // Editing or removing purchase records is admin-only
+      allow update, delete: if isAdmin();
     }
 
     // Users: allow read/write (email-based identity, no auth)
@@ -28,6 +36,17 @@ service cloud.firestore {
     match /teamMembers/{memberId} {
       allow read: if true;
       allow write: if true;
+    }
+
+    // Regions: public read, admin-managed
+    match /regions/{regionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Admin-only settings/config documents
+    match /adminSettings/{docId} {
+      allow read, write: if isAdmin();
     }
   }
 }
