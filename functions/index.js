@@ -15,9 +15,21 @@ exports.syncOffsetToLittleGreenLight = functions.firestore
     const offsetData = snapshot.data();
     const offsetId = context.params.offsetId;
 
+    // Records imported from the old site were already sent to LGL by that site
+    if (offsetData.source === "legacy") return null;
+
     // Idempotency check - if already synced, skip
     if (offsetData.syncedToLGL) {
       console.log(`Offset ${offsetId} already synced to LGL, skipping.`);
+      return null;
+    }
+
+    // Kill switch: LGL only receives gifts when explicitly enabled in functions/.env.
+    // Keep this off while importing data or while the client is testing.
+    const lglUrl = process.env.LGL_WEBHOOK_URL;
+    if (process.env.LGL_SYNC_ENABLED !== "true" || !lglUrl) {
+      console.log(`LGL sync disabled — offset ${offsetId} not sent.`);
+      await snapshot.ref.update({ lglSkipped: true });
       return null;
     }
 
@@ -47,13 +59,31 @@ exports.syncOffsetToLittleGreenLight = functions.firestore
       }
 
       // Prepare payload for Little Green Light webhook
+      // Entries added in the admin section carry their own name, payment
+      // method and gift date; website purchases fall back to the defaults.
+      const PAYMENT_TYPE_LABELS = {
+        check: "Check",
+        cash: "Cash",
+        credit_card: "Credit Card",
+        ach: "ACH",
+        stock: "Stock",
+        in_kind: "In-Kind",
+        other: "Other",
+      };
+      if (offsetData.name) userName = offsetData.name;
+      if (offsetData.zipCode) userZipCode = offsetData.zipCode;
+      const giftDate =
+        offsetData.source === "manual" && offsetData.timestamp?.toDate
+          ? offsetData.timestamp.toDate()
+          : new Date();
+
       const lglPayload = {
-        payment_type: "Credit Card",
+        payment_type: PAYMENT_TYPE_LABELS[offsetData.paymentMethod] || "Credit Card",
         email: offsetData.userEmail || "unknown@example.com",
         amount: offsetData.cost || 0,
         name: userName,
         zip_code: userZipCode,
-        date: new Date().toISOString().split("T")[0], // YYYY-MM-DD format
+        date: giftDate.toISOString().split("T")[0], // YYYY-MM-DD format
         fund: "Finger Lakes Climate Fund",
         // Additional metadata for tracking
         offsetType: offsetData.offsetType || null,
@@ -63,9 +93,6 @@ exports.syncOffsetToLittleGreenLight = functions.firestore
       };
 
       // Send to Little Green Light webhook
-      const lglUrl =
-        "https://sustainabletompkins.littlegreenlight.com/integrations/e43d9598-3876-47a8-9411-9a6afdff1647/listener";
-
       await sendWebhookRequest(lglUrl, lglPayload);
 
       // Mark as synced in Firestore
@@ -100,13 +127,15 @@ function sendWebhookRequest(url, payload) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(payload);
 
+    const { hostname, pathname, search } = new URL(url);
+
     const options = {
-      hostname: "sustainabletompkins.littlegreenlight.com",
-      path: "/integrations/e43d9598-3876-47a8-9411-9a6afdff1647/listener",
+      hostname,
+      path: pathname + search,
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Content-Length": data.length,
+        "Content-Length": Buffer.byteLength(data),
       },
       timeout: 30000, // 30 second timeout
     };
@@ -190,6 +219,9 @@ exports.notifyOnAttribution = functions.firestore
     const before = change.before.data();
     const after = change.after.data();
 
+    // Never email donors about records imported from the old site
+    if (after.source === "legacy") return null;
+
     // Only fire when teamId is newly set (wasn't set before)
     if (before.teamId || !after.teamId) return null;
 
@@ -203,18 +235,26 @@ exports.notifyOnAttribution = functions.firestore
       const db = admin.firestore();
 
       // Fetch team/individual account for cumulative stats
-      const teamsRef = db.collection("teams");
-      const teamSnap = await teamsRef
-        .where("legacyId", "==", after.teamId)
-        .limit(1)
-        .get();
+      // teamDocId is authoritative. The numeric legacy teamId is only a fallback:
+      // teams and individuals share the collection and a few legacy ids overlap.
+      let teamData = null;
+      if (after.teamDocId) {
+        const teamSnap = await db.collection("teams").doc(after.teamDocId).get();
+        if (teamSnap.exists) teamData = teamSnap.data();
+      } else {
+        const teamSnap = await db
+          .collection("teams")
+          .where("legacyId", "==", after.teamId)
+          .get();
+        const docs = teamSnap.docs.map((d) => d.data());
+        teamData = docs.find((d) => !d.isIndividual) || docs[0] || null;
+      }
 
       let accountName = "your account";
       let totalPounds = 0;
       let isIndividual = false;
 
-      if (!teamSnap.empty) {
-        const teamData = teamSnap.docs[0].data();
+      if (teamData) {
         accountName = teamData.name;
         totalPounds = teamData.pounds ?? 0;
         isIndividual = teamData.isIndividual ?? false;
