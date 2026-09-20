@@ -242,3 +242,9 @@ form {
     background-color: #4b5563;
   }
 }
+
+/* Shown when Stripe.js could not be downloaded from js.stripe.com. */
+.stripe-unavailable .error-message {
+  margin: 0;
+  line-height: 1.5;
+}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { Trophy, Users, User, Leaf, Hash, Search, ChevronDown } from "lucide-react";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { API_URL } from "../utils/apiUrl";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

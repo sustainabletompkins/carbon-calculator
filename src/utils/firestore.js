@@ -7,10 +7,16 @@ import {
   deleteDoc,
   query,
   where,
+  getDoc,
   getDocs,
   updateDoc,
   increment,
 } from "firebase/firestore";
+
+// Email is the identity key across carts, offsets, users and team lookups.
+// Firestore matches strings exactly, so always compare and store one spelling.
+export const normalizeEmail = (email) =>
+  typeof email === "string" ? email.trim().toLowerCase() : email;
 
 /**
  * Save a single cart item to Firestore
@@ -19,6 +25,7 @@ import {
  * @returns {Promise<string>} - The document ID
  */
 export const saveCartItem = async (userEmail, item) => {
+  userEmail = normalizeEmail(userEmail);
   try {
     const db = getFirestore();
     const cartCollection = collection(db, "cartItems");
@@ -75,6 +82,7 @@ export const deleteCartItem = async (docId) => {
  * @returns {Promise<Array>} - Array of cart items
  */
 export const getUserCartItems = async (userEmail) => {
+  userEmail = normalizeEmail(userEmail);
   try {
     const db = getFirestore();
     const cartCollection = collection(db, "cartItems");
@@ -136,6 +144,7 @@ export const saveOffsetRecords = async (
   transactionId,
   cartItems
 ) => {
+  userEmail = normalizeEmail(userEmail);
   try {
     const db = getFirestore();
     const offsetsCollection = collection(db, "offsets");
@@ -206,6 +215,7 @@ const getOffsetDescription = (item) => {
  * @returns {Promise<Array>} - Array of offset records
  */
 export const getUserOffsets = async (userEmail) => {
+  userEmail = normalizeEmail(userEmail);
   try {
     const db = getFirestore();
     const offsetsCollection = collection(db, "offsets");
@@ -293,6 +303,7 @@ export const updateOffsetsWithStripeData = async (
  * @returns {Promise<Object>} - User data with email
  */
 export const getOrCreateUserByEmail = async (email, additionalData = {}) => {
+  email = normalizeEmail(email);
   try {
     const db = getFirestore();
     const usersCollection = collection(db, "users");
@@ -335,6 +346,7 @@ export const getOrCreateUserByEmail = async (email, additionalData = {}) => {
  * @returns {Promise<Object|null>}
  */
 export const getIndividualAccountByEmail = async (email) => {
+  email = normalizeEmail(email);
   try {
     const db = getFirestore();
     const teamsCollection = collection(db, "teams");
@@ -360,6 +372,7 @@ export const getIndividualAccountByEmail = async (email) => {
  * @returns {Promise<Array>} - Array of {id, teamId, teamName, name, founder, ...}
  */
 export const getTeamMembershipsByEmail = async (email) => {
+  email = normalizeEmail(email);
   try {
     const db = getFirestore();
     const teamMembersCollection = collection(db, "teamMembers");
@@ -381,14 +394,15 @@ export const getTeamMembershipsByEmail = async (email) => {
 /**
  * Attribute a completed purchase to a team — increments the team's pounds/count/dollars
  * and tags each offset record with the teamId.
- * @param {number} teamId - The team's legacyId (numeric)
+ * @param {string} teamDocId - The teams document ID (teams and individuals share
+ *   the collection and legacy numeric ids overlap, so the doc ID is the identity)
  * @param {number} carbonPounds - Total carbon pounds from this purchase
  * @param {number} dollars - Total dollar amount of the purchase
  * @param {Array<string>} offsetIds - Firestore offset document IDs to tag
  * @returns {Promise<void>}
  */
 export const attributeOffsetToTeam = async (
-  teamId,
+  teamDocId,
   carbonPounds,
   dollars,
   offsetIds = []
@@ -396,13 +410,11 @@ export const attributeOffsetToTeam = async (
   try {
     const db = getFirestore();
 
-    // Find the team document by its legacyId
-    const teamsCollection = collection(db, "teams");
-    const q = query(teamsCollection, where("legacyId", "==", teamId));
-    const querySnapshot = await getDocs(q);
+    const teamDocRef = doc(db, "teams", teamDocId);
+    const teamSnap = await getDoc(teamDocRef);
+    const teamId = teamSnap.exists() ? teamSnap.data().legacyId ?? null : null;
 
-    if (!querySnapshot.empty) {
-      const teamDocRef = querySnapshot.docs[0].ref;
+    if (teamSnap.exists()) {
       await updateDoc(teamDocRef, {
         pounds: increment(carbonPounds),
         count: increment(1),
@@ -410,20 +422,22 @@ export const attributeOffsetToTeam = async (
         updatedAt: serverTimestamp(),
       });
     } else {
-      console.warn(`Team with legacyId ${teamId} not found in Firestore`);
+      console.warn(`Team ${teamDocId} not found in Firestore`);
+      return;
     }
 
-    // Tag each offset record with the teamId
+    // Tag each offset record with the team
     for (const offsetDocId of offsetIds) {
       const offsetRef = doc(db, "offsets", offsetDocId);
       await updateDoc(offsetRef, {
+        teamDocId,
         teamId,
         updatedAt: serverTimestamp(),
       });
     }
 
     console.log(
-      `Attributed ${carbonPounds.toFixed(0)} lbs / $${dollars.toFixed(2)} to team ${teamId}`
+      `Attributed ${carbonPounds.toFixed(0)} lbs / $${dollars.toFixed(2)} to team ${teamDocId}`
     );
   } catch (error) {
     console.error("Error attributing offset to team:", error);
@@ -438,6 +452,7 @@ export const attributeOffsetToTeam = async (
  * @returns {Promise<void>}
  */
 export const updateUserProfile = async (email, userData) => {
+  email = normalizeEmail(email);
   try {
     const db = getFirestore();
     const usersCollection = collection(db, "users");

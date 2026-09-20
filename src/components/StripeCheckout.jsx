@@ -11,6 +11,8 @@ import {
 } from "../utils/firestore";
 import TeamContributionModal from "./TeamContributionModal";
 import "./StripeCheckout.css";
+import { API_URL } from "../utils/apiUrl";
+import { useStripeStatus } from "../utils/stripeLoader.js";
 
 const StripeCheckout = ({
   totalAmount,
@@ -23,6 +25,7 @@ const StripeCheckout = ({
 }) => {
   const stripe = useStripe();
   const elements = useElements();
+  const stripeStatus = useStripeStatus();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -35,7 +38,7 @@ const StripeCheckout = ({
     setError(null);
 
     if (!stripe || !elements) {
-      setError("Stripe has not loaded");
+      setError("The payment form is still loading. Please try again in a moment.");
       return;
     }
 
@@ -63,9 +66,7 @@ const StripeCheckout = ({
 
       // Step 2: Create payment intent on backend
       const paymentResponse = await fetch(
-        `${
-          import.meta.env.VITE_API_URL || "http://localhost:3000"
-        }/api/payment`,
+        `${API_URL}/api/payment`,
         {
           method: "POST",
           headers: {
@@ -151,10 +152,10 @@ const StripeCheckout = ({
             // Build a normalised list of accounts the user can attribute to
             const accounts = [
               ...(individual
-                ? [{ legacyId: individual.legacyId, name: individual.name, isIndividual: true, pounds: individual.pounds }]
+                ? [{ docId: individual.id, name: individual.name, isIndividual: true, pounds: individual.pounds }]
                 : []),
               ...memberships.map((m) => ({
-                legacyId: m.teamId,
+                docId: m.teamDocId,
                 name: m.teamName,
                 isIndividual: false,
                 pounds: null,
@@ -168,7 +169,7 @@ const StripeCheckout = ({
                 0
               );
               await attributeOffsetToTeam(
-                accounts[0].legacyId,
+                accounts[0].docId,
                 totalPounds,
                 totalAmount,
                 savedOffsetIds
@@ -205,11 +206,11 @@ const StripeCheckout = ({
     }
   };
 
-  const handleTeamContribute = async (teamId) => {
+  const handleTeamContribute = async (teamDocId) => {
     if (!teamPrompt) return;
     try {
       await attributeOffsetToTeam(
-        teamId,
+        teamDocId,
         teamPrompt.totalPounds,
         teamPrompt.totalDollars,
         teamPrompt.offsetIds
@@ -241,6 +242,15 @@ const StripeCheckout = ({
     );
   }
 
+  // Stripe.js is fetched from js.stripe.com, so it can fail on a flaky network
+  // even when everything here is configured correctly.
+  const stripeUnavailable =
+    stripeStatus === "failed" || stripeStatus === "missing-key";
+  const unavailableMessage =
+    stripeStatus === "missing-key"
+      ? "Card payments aren't configured for this site yet. Please get in touch so we can take your donation another way."
+      : "We couldn't load Stripe's secure payment form. This is usually a network, VPN, or ad-blocker issue rather than a problem with your card. Check your connection and reload the page.";
+
   return (
     <div className="stripe-checkout-modal">
       <div className="stripe-checkout-content">
@@ -261,6 +271,27 @@ const StripeCheckout = ({
             <p className="amount">${totalAmount.toFixed(2)}</p>
           </div>
 
+          {stripeUnavailable ? (
+            <div className="stripe-unavailable">
+              <div className="error-message">{unavailableMessage}</div>
+              <div className="stripe-checkout-actions">
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="btn btn-secondary"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="btn btn-primary"
+                >
+                  Reload page
+                </button>
+              </div>
+            </div>
+          ) : (
           <form onSubmit={handleSubmit}>
             <div className="card-element-wrapper">
               <label htmlFor="card-element">Card Details</label>
@@ -299,10 +330,15 @@ const StripeCheckout = ({
                 className="btn btn-primary"
                 disabled={loading || !stripe}
               >
-                {loading ? "Processing..." : `Pay $${totalAmount.toFixed(2)}`}
+                {loading
+                  ? "Processing..."
+                  : !stripe
+                    ? "Loading payment form..."
+                    : `Pay $${totalAmount.toFixed(2)}`}
               </button>
             </div>
           </form>
+          )}
         </div>
       </div>
     </div>
