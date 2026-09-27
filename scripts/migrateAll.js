@@ -115,6 +115,11 @@ function offsetDoc(o) {
   };
 }
 
+// The old site's teams.members column is stale (Friends of Ellen says 1 with 28
+// member rows), so count the rows we import; the admin UI increments from there.
+const memberRowsByTeam = new Map();
+for (const m of dump.teamMembers) memberRowsByTeam.set(m.team_id, (memberRowsByTeam.get(m.team_id) || 0) + 1);
+
 // pounds/count are the old site's stored totals, imported as-is (they don't
 // equal the sum of offsets for most teams, and the leaderboard should match the old site).
 const accountDoc = (a, isIndividual) => ({
@@ -122,7 +127,7 @@ const accountDoc = (a, isIndividual) => ({
   source: "legacy",
   name: a.name,
   ...(isIndividual ? { email: normalizeEmail(a.email) || null } : {}),
-  membersCount: isIndividual ? 1 : a.members ?? 0,
+  membersCount: isIndividual ? 1 : memberRowsByTeam.get(a.id) || 0,
   pounds: a.pounds ?? 0,
   count: a.count ?? 0,
   totalDollars: dollarsByAccount.get(`${isIndividual ? "ind" : "team"}-${a.id}`) || 0,
