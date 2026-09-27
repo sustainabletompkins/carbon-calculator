@@ -2,7 +2,7 @@ import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../contexts/CartContext";
 import StripeCheckout from "./StripeCheckout";
 import { PageHeader } from "./ui";
-import { LBS_PER_KG, poundsForDollars } from "../../lib/offsetRates.js";
+import { LBS_PER_KG, kgToLbs, poundsForDollars } from "../../lib/offsetRates.js";
 
 const ITEM_LABELS = {
   car: "Car Trip",
@@ -52,7 +52,7 @@ const describeItem = (item) => {
       })} mi`,
     );
   }
-  if (item.co2 > 0) meta.push(`${item.co2.toFixed(2)} kg CO2`);
+  if (item.co2 > 0) meta.push(`${Math.round(kgToLbs(item.co2)).toLocaleString()} lbs CO2`);
   if (item.travelers > 1) meta.push(`${item.travelers} travelers`);
 
   return { icon: ITEM_ICONS[item.tripMode] || "eco", title, detail, meta };
@@ -289,7 +289,7 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
                   Total
                 </p>
                 <p className="text-xs text-muted-light dark:text-muted-dark">
-                  {totalCo2.toFixed(2)} kg CO2 to offset
+                  {Math.round(kgToLbs(totalCo2)).toLocaleString()} lbs CO2 to offset
                 </p>
               </div>
               <p className="text-xl sm:text-2xl font-bold tabular-nums text-primary">

@@ -1,54 +1,44 @@
 import { useState, useContext } from "react";
 import { CartContext } from "../contexts/CartContext";
 import { InfoPopover, PageHeader } from "./ui";
-import { COST_PER_LB, LBS_PER_KG, offsetCost } from "../../lib/offsetRates.js";
+import { COST_PER_LB, LBS_PER_KG } from "../../lib/offsetRates.js";
 
 const QuickOffset = ({ setActiveTab }) => {
   const [offsetType, setOffsetType] = useState("");
   const [timePeriod, setTimePeriod] = useState("year");
   const { addToCart } = useContext(CartContext);
 
-  // Standard US consumption averages and emission factors
+  // Yearly CO2 for each typical offset, in lbs. A quarter is a quarter of the
+  // year and a month a twelfth.
   const offsetOptions = {
     "home energy": {
       label: "Home Energy",
       icon: "home",
-      description: "Average US household energy use, on the upstate NY grid",
+      description: "Average US home's energy use, on the upstate NY grid",
       methodology:
-        "Based on the EPA's average US home (12,194 kWh of electricity plus natural gas, propane and heating oil), with electricity at the upstate New York grid rate of 0.242 lbs CO2 per kWh. That is about 8,790 lbs of CO2 a year.",
-      emissions: {
-        year: 3987, // kg CO2 per year (8,790 lbs)
-        quarter: 997, // kg CO2 per quarter
-        month: 332, // kg CO2 per month
-      },
+        "Based on the EPA's average US home: 12,194 kWh of electricity at the upstate New York grid rate of 0.242 lbs CO2 per kWh, plus natural gas, propane and heating oil.",
+      lbsPerYear: 8790,
     },
     "car travel": {
       label: "Car Travel",
       icon: "directions_car",
       description: "Typical upstate NY driver (12,000 miles per year)",
       methodology:
-        "Based on 12,000 miles a year, the upstate New York average, at the EPA's typical 22.8 mpg and 19.64 lbs of CO2 per gallon of gasoline. That is about 10,340 lbs of CO2 a year.",
-      emissions: {
-        year: 4689, // kg CO2 per year (12,000 mi / 22.8 mpg x 19.64 lbs/gal)
-        quarter: 1172, // kg CO2 per quarter
-        month: 391, // kg CO2 per month
-      },
+        "Based on 12,000 miles a year, the upstate New York average, at the EPA's typical 22.8 mpg and 19.64 lbs of CO2 per gallon of gasoline.",
+      lbsPerYear: 10337, // 12,000 mi / 22.8 mpg x 19.64 lbs/gal
     },
     "air travel": {
       label: "Air Travel",
       icon: "flight",
       description: "Typical domestic flyer (2.5 cross-country round trips per year)",
       methodology:
-        "Based on 2.5 New York to Los Angeles round trips a year (12,375 miles) at the EPA's 0.163 kg CO2 per passenger-mile for flights over 2,300 miles.",
-      emissions: {
-        year: 2017, // kg CO2 per year (2,475 mi each way x 2 x 2.5 x 0.163 kg/mi)
-        quarter: 504, // kg CO2 per quarter
-        month: 168, // kg CO2 per month
-      },
+        "Based on 2.5 New York to Los Angeles round trips a year (12,375 miles) at the EPA's 0.359 lbs CO2 per passenger-mile for flights over 2,300 miles.",
+      lbsPerYear: 4447, // 2,475 mi each way x 2 x 2.5 x 0.359 lbs/mi
     },
   };
 
-  const calculateCost = offsetCost;
+  const PERIODS_PER_YEAR = { year: 1, quarter: 4, month: 12 };
+  const lbsFor = (option) => Math.round(option.lbsPerYear / PERIODS_PER_YEAR[timePeriod]);
 
   const handleCalculate = () => {
     if (!offsetType) {
@@ -57,8 +47,8 @@ const QuickOffset = ({ setActiveTab }) => {
     }
 
     const option = offsetOptions[offsetType];
-    const co2 = option.emissions[timePeriod];
-    const cost = calculateCost(co2);
+    const co2 = lbsFor(option) / LBS_PER_KG;
+    const cost = lbsFor(option) * COST_PER_LB;
 
     // Add to cart
     addToCart({
@@ -79,10 +69,8 @@ const QuickOffset = ({ setActiveTab }) => {
   };
 
   const selectedOption = offsetType ? offsetOptions[offsetType] : null;
-  const estimatedCo2 = selectedOption
-    ? selectedOption.emissions[timePeriod]
-    : 0;
-  const estimatedCost = estimatedCo2 ? calculateCost(estimatedCo2) : 0;
+  const estimatedLbs = selectedOption ? lbsFor(selectedOption) : 0;
+  const estimatedCost = estimatedLbs * COST_PER_LB;
 
   return (
     <main className="p-3 sm:p-4 max-w-4xl mx-auto">
@@ -156,7 +144,7 @@ const QuickOffset = ({ setActiveTab }) => {
                     Estimated CO2
                   </p>
                   <p className="text-lg sm:text-2xl font-bold text-primary">
-                    {estimatedCo2.toLocaleString()} kg
+                    {estimatedLbs.toLocaleString()} lbs
                   </p>
                 </div>
                 <div>
@@ -193,7 +181,7 @@ const QuickOffset = ({ setActiveTab }) => {
                   <p>
                     Offset cost is ${(COST_PER_LB * 2000).toFixed(0)} per ton
                     (2,000 lbs) of CO2, so{" "}
-                    {Math.round(estimatedCo2 * LBS_PER_KG).toLocaleString()} lbs
+                    {estimatedLbs.toLocaleString()} lbs
                     costs $
                     {estimatedCost.toFixed(2)}.
                   </p>

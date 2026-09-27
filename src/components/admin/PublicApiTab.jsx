@@ -127,7 +127,7 @@ export default function PublicApiTab() {
               onChange={(e) => setForm({ ...form, grantsAwarded: e.target.value })}
             />
           </FormField>
-          <FormField label="Lbs CO₂ per gallon of gas" helpText="Used for the gallons-avoided counter. EPA figure is 20.">
+          <FormField label="Lbs CO₂ per gallon of gas" helpText="Used for the gallons-avoided counter. EPA's figure is 19.6; the car calculator uses 19.64.">
             <Input
               type="number"
               min="1"

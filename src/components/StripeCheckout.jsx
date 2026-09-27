@@ -13,6 +13,7 @@ import {
 import TeamContributionModal from "./TeamContributionModal";
 import "./StripeCheckout.css";
 import { API_URL } from "../utils/apiUrl";
+import { kgToLbs } from "../../lib/offsetRates.js";
 import { useStripeStatus } from "../utils/stripeLoader.js";
 
 const StripeCheckout = ({
@@ -185,7 +186,7 @@ const StripeCheckout = ({
             // nowhere to put the credit. A lone account arrives preselected,
             // so confirming it is one click.
             const totalPounds = cartItems.reduce(
-              (sum, item) => sum + (item.co2 ? item.co2 * 2.20462 : 0),
+              (sum, item) => sum + (item.co2 ? kgToLbs(item.co2) : 0),
               0
             );
             setTeamPrompt({

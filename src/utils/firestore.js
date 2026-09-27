@@ -11,6 +11,7 @@ import {
   updateDoc,
   limit,
 } from "firebase/firestore";
+import { kgToLbs } from "../../lib/offsetRates.js";
 import { API_URL } from "./apiUrl";
 
 // Email is the identity key across carts, offsets, users and team lookups.
@@ -156,7 +157,7 @@ export const saveOffsetRecords = async (
         userEmail,
         transactionId,
         offsetType: item.tripMode || item.type, // "car", "air", "home", "quick", or "donation"
-        carbonPounds: item.co2 ? item.co2 * 2.20462 : 0, // Convert kg to pounds
+        carbonPounds: item.co2 ? kgToLbs(item.co2) : 0,
         carbonKg: item.co2 || 0, // Store original kg value as well
         cost: item.cost,
         description: getOffsetDescription(item),
@@ -190,6 +191,8 @@ export const saveOffsetRecords = async (
  * @param {Object} item - The cart item
  * @returns {string} - Description of the offset
  */
+const lbsText = (kg) => `${Math.round(kgToLbs(kg || 0)).toLocaleString()} lbs CO2`;
+
 const getOffsetDescription = (item) => {
   switch (item.tripMode) {
     case "car":
@@ -201,11 +204,11 @@ const getOffsetDescription = (item) => {
         item.destination
       } (${item.distance?.toFixed(2)} miles)`;
     case "home":
-      return `Home energy offset: ${item.co2?.toFixed(2)} kg CO2`;
+      return `Home energy offset: ${lbsText(item.co2)}`;
     case "quick":
-      return `Quick offset: ${item.co2?.toFixed(2)} kg CO2`;
+      return `Quick offset: ${lbsText(item.co2)}`;
     default:
-      return `Offset: ${item.co2?.toFixed(2)} kg CO2`;
+      return `Offset: ${lbsText(item.co2)}`;
   }
 };
 
