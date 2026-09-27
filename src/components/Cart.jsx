@@ -10,6 +10,13 @@ const ITEM_LABELS = {
   quick: "Quick Offset",
 };
 
+const CALCULATOR_LINKS = [
+  { tab: "car", icon: "directions_car", label: "Add Car Trip" },
+  { tab: "air", icon: "flight", label: "Add Flight" },
+  { tab: "home", icon: "home", label: "Add Home Energy" },
+  { tab: "quick", icon: "flash_on", label: "Quick Offset" },
+];
+
 const ITEM_ICONS = {
   car: "directions_car",
   air: "flight",
@@ -41,7 +48,7 @@ const describeItem = (item) => {
     meta.push(
       `${item.distance.toLocaleString(undefined, {
         maximumFractionDigits: 1,
-      })} mi`
+      })} mi`,
     );
   }
   if (item.co2 > 0) meta.push(`${item.co2.toFixed(2)} kg CO2`);
@@ -134,12 +141,29 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
     zipCode: userZipCode,
   };
 
+  const calculatorLinks = (
+    <div className="flex flex-wrap gap-2">
+      {CALCULATOR_LINKS.map(({ tab, icon, label }) => (
+        <button
+          key={tab}
+          onClick={() => setActiveTab(tab)}
+          className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
+        >
+          <span className="material-icons text-sm">{icon}</span>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <main className="p-3 sm:p-4 max-w-6xl mx-auto">
-      <PageHeader
-        title="Your Carbon Offset Cart"
-        subtitle="Review your offsets and complete your contribution"
-      />
+      {cart.length > 0 && (
+        <PageHeader
+          title="Your Carbon Offset Cart"
+          subtitle="Review your offsets and complete your contribution"
+        />
+      )}
 
       {cart.length === 0 ? (
         <div>
@@ -156,6 +180,7 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
             <p className="text-xs sm:text-sm text-muted-light dark:text-muted-dark mb-6">
               Calculate your carbon footprint and add offsets to get started!
             </p>
+            <div className="flex justify-center">{calculatorLinks}</div>
           </div>
 
           {/* Donation Section - Visible in Empty Cart */}
@@ -168,7 +193,7 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
                 Make a Direct Donation
               </h3>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+            <p className="text-left text-sm text-gray-600 dark:text-gray-400 mb-4">
               Want to contribute directly to environmental initiatives without
               calculating a specific carbon offset? Add a donation to your
               order.
@@ -282,7 +307,7 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
             <h3 className="font-semibold text-text-light dark:text-text-dark mb-4">
               Contact Information
             </h3>
-            
+
             {/* Email Input */}
             <div className="mb-4">
               <label className="block text-sm font-medium text-text-light dark:text-text-dark mb-2">
@@ -302,7 +327,8 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
                 <p className="text-red-500 text-sm mt-2">{emailError}</p>
               )}
               <p className="text-xs text-muted-light dark:text-muted-dark mt-2">
-                We'll use this to track your carbon offset records and link your purchases.
+                We'll use this to track your carbon offset records and link your
+                purchases.
               </p>
             </div>
 
@@ -363,57 +389,27 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
       )}
 
       {/* Call to Action for Adding More */}
-      <div className="mt-6 sm:mt-8 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
-        <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-lg p-4 sm:p-6 border border-green-200 dark:border-green-800">
-          <div className="flex items-start gap-3 sm:gap-4">
-            <span className="material-icons text-primary text-2xl sm:text-3xl">
-              info
-            </span>
-            <div className="flex-1">
-              <h3 className="font-semibold text-sm sm:text-base text-text-light dark:text-text-dark mb-2">
-                {cart.length === 0
-                  ? "Want to offset your carbon footprint?"
-                  : "Want to offset more of your carbon footprint?"}
-              </h3>
-              <p className="text-sm text-muted-light dark:text-muted-dark mb-4">
-                {cart.length === 0
-                  ? "Calculate and add offsets for your trips and activities to maximize your positive impact on the environment."
-                  : "Add offsets for all your trips and activities to maximize your positive impact on the environment."}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setActiveTab("car")}
-                  className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                >
-                  <span className="material-icons text-sm">directions_car</span>
-                  Add Car Trip
-                </button>
-                <button
-                  onClick={() => setActiveTab("air")}
-                  className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                >
-                  <span className="material-icons text-sm">flight</span>
-                  Add Flight
-                </button>
-                <button
-                  onClick={() => setActiveTab("home")}
-                  className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                >
-                  <span className="material-icons text-sm">home</span>
-                  Add Home Energy
-                </button>
-                <button
-                  onClick={() => setActiveTab("quick")}
-                  className="inline-flex items-center gap-1 bg-white dark:bg-gray-800 px-4 py-2 rounded-md text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-600 transition-colors"
-                >
-                  <span className="material-icons text-sm">flash_on</span>
-                  Quick Offset
-                </button>
+      {cart.length > 0 && (
+        <div className="mt-6 sm:mt-8 border-t border-gray-200 dark:border-gray-700 pt-4 sm:pt-6">
+          <div className="bg-gradient-to-r from-green-50 to-teal-50 dark:from-green-900/20 dark:to-teal-900/20 rounded-lg p-4 sm:p-6 border border-green-200 dark:border-green-800">
+            <div className="flex items-start gap-3 sm:gap-4">
+              <span className="material-icons text-primary text-2xl sm:text-3xl">
+                info
+              </span>
+              <div className="flex-1 text-left">
+                <h3 className="font-semibold text-text-light dark:text-text-dark mb-2">
+                  Want to offset more of your carbon footprint?
+                </h3>
+                <p className="text-sm text-muted-light dark:text-muted-dark mb-4">
+                  Add offsets for all your trips and activities to maximize your
+                  positive impact on the environment.
+                </p>
+                {calculatorLinks}
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Stripe Checkout Modal */}
       {showCheckout && (
