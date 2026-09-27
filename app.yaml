@@ -20,17 +20,22 @@ handlers:
     script: auto
     secure: always
 
-  # App shell
+  # App shell. no-cache so a deploy shows up on the next load; the hashed
+  # files it points to under assets/ are safe to cache.
   - url: /
     static_files: dist/index.html
     upload: dist/index.html
     secure: always
+    http_headers:
+      Cache-Control: no-cache
 
   # Client-side routes handled by the React app
   - url: /(admin|leaderboard|test)/?
     static_files: dist/index.html
     upload: dist/index.html
     secure: always
+    http_headers:
+      Cache-Control: no-cache
 
   # Built assets
   - url: /(.*)
