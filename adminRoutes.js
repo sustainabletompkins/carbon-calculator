@@ -488,6 +488,9 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
       const snap = await ref.get();
       if (!snap.exists) throw new HttpError(404, "Team not found");
       const old = snap.data();
+      if (t.name && t.name !== old.name) {
+        await assertNameAvailable(db, t.name, old.isIndividual === true, undefined, req.params.docId);
+      }
 
       await ref.update({ ...t, updatedAt: FieldValue.serverTimestamp(), lastEditedBy: req.user.email || req.user.uid });
 
