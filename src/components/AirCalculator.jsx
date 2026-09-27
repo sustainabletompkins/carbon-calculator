@@ -4,7 +4,7 @@ import useGoogleMaps from "../hooks/useGoogleMaps";
 import { greatCircleMiles } from "../utils/geo";
 import { CartContext } from "../contexts/CartContext";
 import { PageHeader } from "./ui";
-import { offsetCost } from "../../lib/offsetRates.js";
+import { airKgPerPassengerMile, offsetCost } from "../../lib/offsetRates.js";
 
 const AirCalculator = ({ setActiveTab }) => {
   const [origin, setOrigin] = useState(null);
@@ -39,7 +39,7 @@ const AirCalculator = ({ setActiveTab }) => {
 
       setDistance(distanceInMiles);
       const { co2: calculatedCo2, cost: calculatedCost } =
-        calculateEmissions(distanceInMiles);
+        calculateEmissions(distanceInMiles, isRoundTrip ? 2 : 1);
 
       // Automatically add to cart
       const numTravelers = parseInt(travelers) || 1;
@@ -78,7 +78,7 @@ const AirCalculator = ({ setActiveTab }) => {
 
     setDistance(totalMiles);
     const { co2: calculatedCo2, cost: calculatedCost } =
-      calculateEmissions(totalMiles);
+      calculateEmissions(totalMiles, isRoundTrip ? 2 : 1);
 
     // Automatically add to cart
     const numTravelers = parseInt(travelers) || 1;
@@ -97,22 +97,10 @@ const AirCalculator = ({ setActiveTab }) => {
     setActiveTab("cart");
   };
 
-  const calculateEmissions = (distance) => {
-    // Air travel emissions vary by class and distance
-    // Short-haul (<500 mi): higher emissions per mile
-    // Long-haul (>500 mi): lower emissions per mile
-
-    let co2PerMilePerPerson;
-    const isLongHaul = distance > 500;
-
-    if (flightClass === "economy") {
-      co2PerMilePerPerson = isLongHaul ? 0.18 : 0.24;
-    } else if (flightClass === "business") {
-      co2PerMilePerPerson = isLongHaul ? 0.43 : 0.58;
-    } else {
-      // first class
-      co2PerMilePerPerson = isLongHaul ? 0.64 : 0.86;
-    }
+  // The per-mile rate depends on how long each flight is, so a round trip is
+  // rated on its one-way length.
+  const calculateEmissions = (distance, flights) => {
+    const co2PerMilePerPerson = airKgPerPassengerMile(distance / flights, flightClass);
 
     const numTravelers = parseInt(travelers) || 1;
     const calculatedCo2 = distance * co2PerMilePerPerson * numTravelers;
