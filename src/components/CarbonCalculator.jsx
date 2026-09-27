@@ -282,7 +282,7 @@ const CarbonCalculator = () => {
                 activeTab === tab.id
                   ? "border-primary text-primary bg-white/80 dark:bg-gray-800/80"
                   : "border-transparent text-gray-600 hover:text-primary hover:border-primary/50 hover:bg-white/40 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-500"
-              } flex-1 py-2 sm:py-3 px-1 sm:px-3 border-b-2 font-medium text-xs flex items-center justify-center relative transition-all duration-200 rounded-t-lg`}
+              } flex-1 py-2 sm:py-3 px-1 sm:px-3 border-b-2 font-semibold text-sm sm:text-base flex items-center justify-center relative transition-all duration-200 rounded-t-lg`}
             >
               <span className="material-icons text-lg sm:text-xl md:mr-1.5">
                 {tab.icon}
