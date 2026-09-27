@@ -25,13 +25,13 @@ const QuickOffset = ({ setActiveTab }) => {
     "car travel": {
       label: "Car Travel",
       icon: "directions_car",
-      description: "Average US driver annual mileage (~13,500 miles/year)",
+      description: "Typical upstate NY driver (12,000 miles per year)",
       methodology:
-        "Based on an average US driver traveling 13,500 miles a year at average vehicle emissions of 404g CO2 per mile.",
+        "Based on 12,000 miles a year, the upstate New York average, at the EPA's typical 22.8 mpg and 19.64 lbs of CO2 per gallon of gasoline. That is about 10,340 lbs of CO2 a year.",
       emissions: {
-        year: 5454, // kg CO2 per year (13,500 miles * 0.404 kg/mile)
-        quarter: 1364, // kg CO2 per quarter
-        month: 455, // kg CO2 per month
+        year: 4689, // kg CO2 per year (12,000 mi / 22.8 mpg x 19.64 lbs/gal)
+        quarter: 1172, // kg CO2 per quarter
+        month: 391, // kg CO2 per month
       },
     },
     "air travel": {
