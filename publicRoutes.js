@@ -165,13 +165,16 @@ export function createPublicRouter({ db, ledger, regionNames = {}, cacheSeconds 
 
         const yearStart = new Date(new Date().getFullYear(), 0, 1).toISOString();
         const ytd = summarize(scoped.filter((r) => r.kind === "offset" && r.date && r.date >= yearStart));
+        const ytdDonations = summarize(scoped.filter((r) => r.kind === "donation" && r.date && r.date >= yearStart));
 
         // The baseline (and the grant count) describe the fund as a whole, so
         // they only apply to an unfiltered request.
         const wholeFund = regionIds.size === 0;
         const base = wholeFund ? config.baseline : { pounds: 0, dollars: 0, offsets: 0 };
 
-        const pounds = Math.max(0, offsets.pounds + base.pounds);
+        // Donations are credited pounds at the offset price, so they count here
+        // even though their dollars are reported separately.
+        const pounds = Math.max(0, offsets.pounds + donations.pounds + base.pounds);
         const dollars = Math.max(0, offsets.dollars + base.dollars);
         const count = Math.max(0, offsets.count + base.offsets);
         const scopedEntries = regionIds.size
@@ -194,7 +197,7 @@ export function createPublicRouter({ db, ledger, regionNames = {}, cacheSeconds 
           individualCount: scopedEntries.filter((e) => e.type === "individual").length,
           thisYear: {
             year: new Date().getFullYear(),
-            poundsOffset: Math.round(ytd.pounds),
+            poundsOffset: Math.round(ytd.pounds + ytdDonations.pounds),
             dollarsRaised: round2(ytd.dollars),
             offsetCount: ytd.count,
           },

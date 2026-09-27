@@ -4,12 +4,11 @@ import { adminJson } from "../../utils/adminApi";
 import { Button, FormField, Input, Select, Textarea, Alert } from "../ui";
 import Modal from "./Modal";
 import { PAYMENT_METHODS, toDateInput } from "./format";
+import { poundsForDollars } from "../../../lib/offsetRates.js";
 
-// Same rate the public calculators charge (costPerKg = 0.01). Only used to
-// suggest a value; the admin can type any number.
-const COST_PER_KG = 0.01;
-const LBS_PER_KG = 2.20462;
-const suggestPounds = (dollars) => Math.round((dollars / COST_PER_KG) * LBS_PER_KG);
+// Same rate the public calculators charge. Only used to suggest a value; the
+// admin can type any number.
+const suggestPounds = (dollars) => Math.round(poundsForDollars(dollars));
 
 /**
  * Add a manual offset/donation, or edit any existing ledger record.
@@ -95,7 +94,7 @@ export default function TransactionForm({ record, defaultKind = "offset", onClos
           <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Entry type">
             {[
               ["offset", "Carbon offset", "Counts toward CO₂ totals"],
-              ["donation", "Donation", "Money only, no CO₂"],
+              ["donation", "Donation", `Credited at ${poundsForDollars(1)} lbs CO₂ per $1`],
             ].map(([value, label, hint]) => (
               <button
                 type="button"

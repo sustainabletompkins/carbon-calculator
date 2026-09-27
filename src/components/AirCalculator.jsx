@@ -4,6 +4,7 @@ import useGoogleMaps from "../hooks/useGoogleMaps";
 import { greatCircleMiles } from "../utils/geo";
 import { CartContext } from "../contexts/CartContext";
 import { PageHeader } from "./ui";
+import { offsetCost } from "../../lib/offsetRates.js";
 
 const AirCalculator = ({ setActiveTab }) => {
   const [origin, setOrigin] = useState(null);
@@ -122,8 +123,7 @@ const AirCalculator = ({ setActiveTab }) => {
   };
 
   const calculateCost = (co2) => {
-    const costPerKg = 0.01;
-    const calculatedCost = co2 * costPerKg;
+    const calculatedCost = offsetCost(co2);
     setCost(calculatedCost);
     return calculatedCost;
   };

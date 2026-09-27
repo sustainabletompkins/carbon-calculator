@@ -2,6 +2,7 @@ import { useContext, useState, useEffect } from "react";
 import { CartContext } from "../contexts/CartContext";
 import StripeCheckout from "./StripeCheckout";
 import { PageHeader } from "./ui";
+import { LBS_PER_KG, poundsForDollars } from "../../lib/offsetRates.js";
 
 const ITEM_LABELS = {
   car: "Car Trip",
@@ -110,7 +111,7 @@ const Cart = ({ setActiveTab, onPaymentSuccess }) => {
     const donationItem = {
       type: "donation",
       cost: amount,
-      co2: 0,
+      co2: poundsForDollars(amount) / LBS_PER_KG,
       description: `Direct Donation`,
     };
 

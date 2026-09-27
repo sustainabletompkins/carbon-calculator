@@ -26,6 +26,7 @@ import {
   PUBLIC_STATS_DOC,
 } from "./lib/ledger.js";
 import { allocateLegacyId, assertNameAvailable } from "./lib/teams.js";
+import { poundsForDollars } from "./lib/offsetRates.js";
 
 const PAYMENT_METHODS = ["check", "cash", "credit_card", "ach", "stock", "in_kind", "other"];
 
@@ -260,7 +261,7 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
       if (e.kind === "offset" && !(e.pounds > 0)) throw new HttpError(400, "Offsets need a pounds of CO₂ value greater than zero");
       if (e.kind === "donation") {
         if (!(e.cost > 0)) throw new HttpError(400, "Donations need an amount greater than zero");
-        e.pounds = 0;
+        e.pounds = poundsForDollars(e.cost); // credited at the offset price, as the old site did
         e.teamDocId = null; // straight donations don't count toward Carbon Race totals
       }
       const team = await resolveTeam(e.teamDocId);
@@ -313,12 +314,12 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
       const oldKind = old.offsetType === "donation" ? "donation" : "offset";
       if (e.kind && e.kind !== oldKind) throw new HttpError(400, "Type cannot be changed. Delete and re-add instead.");
 
-      const oldPounds = oldKind === "donation" ? 0 : num(old.carbonPounds ?? old.pounds);
+      const oldPounds = num(old.carbonPounds ?? old.pounds);
       const oldCost = num(old.cost);
       const oldTeamDocId = await currentTeamDocId(old);
 
-      const newPounds = oldKind === "donation" ? 0 : e.pounds ?? oldPounds;
       const newCost = e.cost ?? oldCost;
+      const newPounds = oldKind === "donation" ? poundsForDollars(newCost) : e.pounds ?? oldPounds;
       const newTeamDocId = oldKind === "donation" ? null : e.teamDocId !== undefined ? e.teamDocId : oldTeamDocId;
       if (oldKind === "offset" && !(newPounds > 0)) throw new HttpError(400, "Offsets need a pounds value greater than zero");
       const newTeam = await resolveTeam(newTeamDocId);
@@ -327,7 +328,7 @@ export function createAdminRouter({ db, ledger, regionNames = {} }) {
       // legacy-shaped records stay internally consistent.
       const isLegacyShape = "pounds" in old && !("carbonPounds" in old);
       const update = { updatedAt: FieldValue.serverTimestamp(), lastEditedBy: req.user.email || req.user.uid };
-      if (e.pounds !== undefined && oldKind === "offset") {
+      if (oldKind === "donation" ? e.cost !== undefined : e.pounds !== undefined) {
         if (isLegacyShape) update.pounds = newPounds;
         else Object.assign(update, { carbonPounds: newPounds, carbonKg: newPounds / LBS_PER_KG });
       }

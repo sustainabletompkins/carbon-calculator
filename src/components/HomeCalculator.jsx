@@ -1,6 +1,7 @@
 import { useState, useContext } from "react";
 import { CartContext } from "../contexts/CartContext";
 import { PageHeader } from "./ui";
+import { HOME_FACTORS_KG, offsetCost } from "../../lib/offsetRates.js";
 
 const HomeCalculator = ({ setActiveTab }) => {
   const [propane, setPropane] = useState("");
@@ -32,17 +33,12 @@ const HomeCalculator = ({ setActiveTab }) => {
 
     setIsCalculating(true);
 
-    // Emission factors (kg CO2 per unit)
-    // Propane: ~5.68 kg CO2 per gallon
-    // Natural Gas: ~5.3 kg CO2 per therm (100 cubic feet)
-    // Electricity: ~0.92 kg CO2 per kWh (US average)
-    // Fuel Oil: ~10.2 kg CO2 per gallon
 
     let totalCo2 = 0;
-    totalCo2 += propaneVal * 5.68;
-    totalCo2 += naturalGasVal * 5.3;
-    totalCo2 += electricityVal * 0.92;
-    totalCo2 += fuelOilVal * 10.2;
+    totalCo2 += propaneVal * HOME_FACTORS_KG.propaneGallon;
+    totalCo2 += naturalGasVal * HOME_FACTORS_KG.naturalGasTherm;
+    totalCo2 += electricityVal * HOME_FACTORS_KG.electricityKwh;
+    totalCo2 += fuelOilVal * HOME_FACTORS_KG.fuelOilGallon;
 
     // Multiply by timeframe
     const multiplier = timeframe === "monthly" ? 1 : 12;
@@ -75,8 +71,7 @@ const HomeCalculator = ({ setActiveTab }) => {
   };
 
   const calculateCost = (co2) => {
-    const costPerKg = 0.01;
-    const calculatedCost = co2 * costPerKg;
+    const calculatedCost = offsetCost(co2);
     setCost(calculatedCost);
     return calculatedCost;
   };

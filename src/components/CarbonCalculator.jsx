@@ -9,10 +9,7 @@ import HomeCalculator from "./HomeCalculator";
 import QuickOffset from "./QuickOffset";
 import Cart from "./Cart";
 import ThankYou from "./ThankYou";
-
-// CO2 from burning one gallon of gasoline: 19.64 lbs, the same factor the
-// previous app used, expressed in kg.
-const KG_CO2_PER_GALLON = 19.64 / 2.20462;
+import { KG_CO2_PER_GALLON_GASOLINE, offsetCost } from "../../lib/offsetRates.js";
 
 // Returns the entered mpg as a number, or null (after alerting) if it isn't
 // a usable value.
@@ -125,16 +122,14 @@ const CarCalculator = ({ setActiveTab }) => {
   };
 
   const calculateEmissions = (distance, mpg) => {
-    const calculatedCo2 = (distance / mpg) * KG_CO2_PER_GALLON;
+    const calculatedCo2 = (distance / mpg) * KG_CO2_PER_GALLON_GASOLINE;
     setCo2(calculatedCo2);
     const calculatedCost = calculateCost(calculatedCo2);
     return { co2: calculatedCo2, cost: calculatedCost };
   };
 
   const calculateCost = (co2) => {
-    // TODO: Implement correct cost calculation
-    const costPerKg = 0.01;
-    const calculatedCost = co2 * costPerKg;
+    const calculatedCost = offsetCost(co2);
     setCost(calculatedCost);
     return calculatedCost;
   };

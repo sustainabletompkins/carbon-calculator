@@ -1,8 +1,7 @@
 import { useState, useContext } from "react";
 import { CartContext } from "../contexts/CartContext";
 import { InfoPopover, PageHeader } from "./ui";
-
-const COST_PER_KG = 0.01;
+import { COST_PER_LB, LBS_PER_KG, offsetCost } from "../../lib/offsetRates.js";
 
 const QuickOffset = ({ setActiveTab }) => {
   const [offsetType, setOffsetType] = useState("");
@@ -14,13 +13,13 @@ const QuickOffset = ({ setActiveTab }) => {
     "home energy": {
       label: "Home Energy",
       icon: "home",
-      description: "Average US household energy consumption",
+      description: "Average US household energy use, on the upstate NY grid",
       methodology:
-        "Based on an average US household using ~11,000 kWh of electricity and ~400 therms of natural gas annually.",
+        "Based on the EPA's average US home (12,194 kWh of electricity plus natural gas, propane and heating oil), with electricity at the upstate New York grid rate of 0.242 lbs CO2 per kWh. That is about 8,790 lbs of CO2 a year.",
       emissions: {
-        year: 7200, // kg CO2 per year (average US home)
-        quarter: 1800, // kg CO2 per quarter
-        month: 600, // kg CO2 per month
+        year: 3987, // kg CO2 per year (8,790 lbs)
+        quarter: 997, // kg CO2 per quarter
+        month: 332, // kg CO2 per month
       },
     },
     "car travel": {
@@ -38,18 +37,18 @@ const QuickOffset = ({ setActiveTab }) => {
     "air travel": {
       label: "Air Travel",
       icon: "flight",
-      description: "Average US air traveler (2-3 round trips per year)",
+      description: "Typical domestic flyer (2.5 cross-country round trips per year)",
       methodology:
-        "Based on an average US traveler taking 2-3 domestic round-trip flights a year.",
+        "Based on 2.5 New York to Los Angeles round trips a year (12,375 miles) at the EPA's 0.163 kg CO2 per passenger-mile for flights over 2,300 miles.",
       emissions: {
-        year: 1200, // kg CO2 per year (avg 2-3 flights)
-        quarter: 300, // kg CO2 per quarter
-        month: 100, // kg CO2 per month
+        year: 2017, // kg CO2 per year (2,475 mi each way x 2 x 2.5 x 0.163 kg/mi)
+        quarter: 504, // kg CO2 per quarter
+        month: 168, // kg CO2 per month
       },
     },
   };
 
-  const calculateCost = (co2) => co2 * COST_PER_KG;
+  const calculateCost = offsetCost;
 
   const handleCalculate = () => {
     if (!offsetType) {
@@ -192,8 +191,10 @@ const QuickOffset = ({ setActiveTab }) => {
                     </p>
                   )}
                   <p>
-                    Offset cost is ${COST_PER_KG.toFixed(2)} per kg of CO2, so{" "}
-                    {estimatedCo2.toLocaleString()} kg costs $
+                    Offset cost is ${(COST_PER_LB * 2000).toFixed(0)} per ton
+                    (2,000 lbs) of CO2, so{" "}
+                    {Math.round(estimatedCo2 * LBS_PER_KG).toLocaleString()} lbs
+                    costs $
                     {estimatedCost.toFixed(2)}.
                   </p>
                 </InfoPopover>

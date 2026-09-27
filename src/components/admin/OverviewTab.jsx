@@ -40,7 +40,7 @@ export default function OverviewTab({ onNavigate }) {
       <section>
         <h2 className="text-lg font-semibold text-text mb-3">{year} so far</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat label="CO₂ offset" value={fmtPounds(thisYear.offsets.pounds)} sub={`${fmtInt(thisYear.offsets.count)} offsets`} />
+          <Stat label="CO₂ offset" value={fmtPounds(thisYear.offsets.pounds + thisYear.donations.pounds)} sub={`${fmtInt(thisYear.offsets.count)} offsets`} />
           <Stat label="Offset revenue" value={fmtMoney(thisYear.offsets.dollars)} />
           <Stat label="Donations" value={fmtMoney(thisYear.donations.dollars)} sub={`${fmtInt(thisYear.donations.count)} gifts`} />
           <Stat label="Total raised" value={fmtMoney(thisYear.offsets.dollars + thisYear.donations.dollars)} />
@@ -50,7 +50,7 @@ export default function OverviewTab({ onNavigate }) {
       <section>
         <h2 className="text-lg font-semibold text-text mb-3">All time</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Stat label="CO₂ offset" value={fmtPounds(allTime.offsets.pounds)} sub={`${fmtInt(allTime.offsets.count)} offsets`} />
+          <Stat label="CO₂ offset" value={fmtPounds(allTime.offsets.pounds + allTime.donations.pounds)} sub={`${fmtInt(allTime.offsets.count)} offsets`} />
           <Stat label="Offset revenue" value={fmtMoney(allTime.offsets.dollars)} />
           <Stat label="Donations" value={fmtMoney(allTime.donations.dollars)} sub={`${fmtInt(allTime.donations.count)} gifts`} />
           <Stat label="Carbon Race teams" value={fmtInt(stats.teams)} sub={`${fmtInt(stats.users)} website users`} />
@@ -75,7 +75,7 @@ export default function OverviewTab({ onNavigate }) {
                   <span className="text-muted">({r.kind === "donation" ? "donation" : SOURCE_LABELS[r.source].toLowerCase() + " offset"})</span>
                 </span>
                 <span className="text-text whitespace-nowrap">
-                  {r.kind === "offset" && `${fmtPounds(r.pounds)} · `}<span className="font-semibold">{fmtMoney(r.cost)}</span>
+                  {r.pounds > 0 && `${fmtPounds(r.pounds)} · `}<span className="font-semibold">{fmtMoney(r.cost)}</span>
                 </span>
               </li>
             ))}
