@@ -45,3 +45,4 @@ public/
 .claude/
 skills-lock.json
 project-specs.md
+test/

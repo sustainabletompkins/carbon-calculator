@@ -84,10 +84,14 @@ const HomeCalculator = ({ setActiveTab }) => {
       />
 
       <div className="mb-6 sm:mb-8">
-        <h3 className="text-lg font-semibold mb-4 text-center text-text-light dark:text-text-dark">
-          Enter your energy use
+        <h3 className="text-lg font-semibold mb-1 text-center text-text-light dark:text-text-dark">
+          Enter one month of energy use
         </h3>
-        <div className="flex justify-center gap-4 mb-6">
+        <p className="text-sm mb-4 text-center text-muted-light dark:text-muted-dark">
+          Use the numbers from a single monthly bill, then choose how long to
+          offset.
+        </p>
+        <div className="flex justify-center gap-4 mb-2">
           <button
             onClick={() => setTimeframe("monthly")}
             className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 ${
@@ -96,7 +100,7 @@ const HomeCalculator = ({ setActiveTab }) => {
                 : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
             }`}
           >
-            Monthly
+            Offset 1 month
           </button>
           <button
             onClick={() => setTimeframe("annual")}
@@ -106,9 +110,14 @@ const HomeCalculator = ({ setActiveTab }) => {
                 : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
             }`}
           >
-            Annual
+            Offset 1 year
           </button>
         </div>
+        <p className="text-xs mb-6 text-center text-muted-light dark:text-muted-dark">
+          {timeframe === "monthly"
+            ? "Offsets the month you entered."
+            : "Offsets a full year: your monthly usage × 12."}
+        </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
@@ -200,8 +209,8 @@ const HomeCalculator = ({ setActiveTab }) => {
           </span>
           <div className="flex-1">
             <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-300">
-              <strong>Tip:</strong> You can find these values on your utility
-              bills. Enter only the energy sources you use.
+              <strong>Tip:</strong> You can find these values on your monthly
+              utility bill. Enter only the energy sources you use.
             </p>
             <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
               • Propane &amp; Fuel Oil: measured in gallons

@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import { CartContext } from "../contexts/CartContext";
 import { InfoPopover, PageHeader } from "./ui";
-import { COST_PER_LB, LBS_PER_KG } from "../../lib/offsetRates.js";
+import { COST_PER_LB, LBS_PER_KG, QUICK_OFFSET_LBS_PER_YEAR } from "../../lib/offsetRates.js";
 
 const QuickOffset = ({ setActiveTab }) => {
   const [offsetType, setOffsetType] = useState("");
@@ -17,7 +17,7 @@ const QuickOffset = ({ setActiveTab }) => {
       description: "Average US home's energy use, on the upstate NY grid",
       methodology:
         "Based on the EPA's average US home: 12,194 kWh of electricity at the upstate New York grid rate of 0.242 lbs CO2 per kWh, plus natural gas, propane and heating oil.",
-      lbsPerYear: 8790,
+      lbsPerYear: QUICK_OFFSET_LBS_PER_YEAR.home,
     },
     "car travel": {
       label: "Car Travel",
@@ -25,7 +25,7 @@ const QuickOffset = ({ setActiveTab }) => {
       description: "Typical upstate NY driver (12,000 miles per year)",
       methodology:
         "Based on 12,000 miles a year, the upstate New York average, at the EPA's typical 22.8 mpg and 19.64 lbs of CO2 per gallon of gasoline.",
-      lbsPerYear: 10337, // 12,000 mi / 22.8 mpg x 19.64 lbs/gal
+      lbsPerYear: QUICK_OFFSET_LBS_PER_YEAR.car,
     },
     "air travel": {
       label: "Air Travel",
@@ -33,7 +33,7 @@ const QuickOffset = ({ setActiveTab }) => {
       description: "Typical domestic flyer (2.5 cross-country round trips per year)",
       methodology:
         "Based on 2.5 New York to Los Angeles round trips a year (12,375 miles) at the EPA's 0.359 lbs CO2 per passenger-mile for flights over 2,300 miles.",
-      lbsPerYear: 4447, // 2,475 mi each way x 2 x 2.5 x 0.359 lbs/mi
+      lbsPerYear: QUICK_OFFSET_LBS_PER_YEAR.air,
     },
   };
 
