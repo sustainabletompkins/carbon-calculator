@@ -54,7 +54,7 @@ site since the last run is erased** — that is intentional before launch.
 
 | Old table | Firestore | Doc ID |
 |---|---|---|
-| offsets (purchased only) | `offsets` | `<id>` |
+| offsets (purchased, plus gifts entered by hand) | `offsets` | `<id>` |
 | teams | `teams` (`isIndividual: false`) | `team-<id>` |
 | individuals | `teams` (`isIndividual: true`) | `ind-<id>` |
 | team_members | `teamMembers` | `<id>` |

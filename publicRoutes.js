@@ -87,11 +87,10 @@ export function createPublicRouter({ db, ledger, regionNames = {}, cacheSeconds 
   // ─── Shared loaders ───────────────────────────────────────────────────────
 
   /**
-   * Leaderboard rows come from the stored totals on each `teams` doc, not from
-   * summing the ledger: the legacy site's team totals were maintained
-   * separately and do not equal the sum of its offsets, and the leaderboard
-   * has to keep matching the old site. Admins can reconcile a team from the
-   * admin UI (Carbon Race teams → Recalculate).
+   * Leaderboard rows come from the stored totals on each `teams` doc, which the
+   * migration rebuilds from the offsets and every purchase or admin entry
+   * updates in step, so they aren't re-summed from the ledger per request.
+   * Admins can reconcile a team from the admin UI (Carbon Race teams → Recalculate).
    */
   async function loadEntries() {
     const snap = await db.collection("teams").get();

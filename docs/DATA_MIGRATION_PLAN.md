@@ -24,7 +24,7 @@ maintenance mode so no purchase lands between the dump and the DNS switch.
 
 | Old table | Rows (current dump) | Migrate? | Target | Notes |
 |---|---|---|---|---|
-| offsets | 2,660 (2,511 purchased) | Yes | `offsets` | Purchase history 2015→now. See "unpurchased" decision below. |
+| offsets | 2,660 (2,511 purchased) | Yes | `offsets` | Purchases and hand-entered gifts 2015→now. See decision 3 below. |
 | teams | 42 | Yes | `teams` | Drives the leaderboard. |
 | individuals | 119 | Yes | `teams` (`isIndividual: true`) | **Never seeded so far** — Firestore has 0. |
 | team_members | 254 | Yes | `teamMembers` | Email → team lookup at checkout. |
@@ -93,8 +93,8 @@ Dump freshness today: offsets end 2025-11-14, teams/individuals/members exported
 3. **Wipe** `offsets`, `teams`, `teamMembers`, `regions`, `users`, `cartItems`
    (requires typing the project id to confirm).
 4. **Load** with deterministic IDs, `source: "legacy"`, `syncedToLGL: true`.
-5. **Verify** — per-collection counts and sum of purchased pounds/dollars must
-   match the dump (today: 17,342,199 lbs / $213,920 across 2,511 purchased).
+5. **Verify** — per-collection counts and sum of imported pounds/dollars must
+   match the dump (today: 24,976,940 lbs / $309,260 across 2,660 offsets).
    Writes a small report we can forward to the client.
 6. `--dry-run` flag for steps 3–4.
 
@@ -123,7 +123,17 @@ site shows.
    can never replay history.
 2. **Old site already pushed gifts to LGL**, so historic gifts are there. No
    LGL backfill needed.
-3. **Skip unpurchased offsets** (149). Import `purchased = true` only.
+3. ~~Skip unpurchased offsets (149).~~ **Revised 2026-09-27: import them.**
+   None has a Stripe session; they're donations, grants and checks staff
+   entered by hand (7.63M lbs, $95,340, all at $25/ton), and the old site
+   credited them to their accounts. Skipping them left 43 accounts with
+   pounds but no offsets.
+7. **Account totals are rebuilt from the offsets (2026-09-27).** The old
+   site's stored `pounds`, `count` and `members` had drifted from its own
+   rows, so each account gets pounds = its dollars ÷ $0.0125, count = its
+   offset rows, members = its member rows. Offsets sold at the old $20/ton
+   price (2015 to Oct 2016) keep their recorded pounds. The leaderboard no
+   longer matches the old site (16.04M → 17.54M lbs).
 4. **Recurring gifts: non-issue.** Checked the cart dump: `frequency` is
    `one_time` on all 5,808 rows and `schedule` is always null.
    `offset_interval` (year/quarter/month) is the *period being offset*

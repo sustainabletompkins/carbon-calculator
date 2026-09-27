@@ -20,11 +20,11 @@ import { createRequire } from "module";
 import { initializeApp, cert } from "firebase-admin/app";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { readJsonLines } from "./utils.js";
+import { LBS_PER_KG, poundsForDollars } from "../lib/offsetRates.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-const LBS_PER_KG = 2.20462;
 const WIPE_COLLECTIONS = ["offsets", "teams", "teamMembers", "regions", "users", "cartItems"];
 const LOCK_DOC = "adminSettings/migration";
 
@@ -59,6 +59,11 @@ const teamIds = new Set(dump.teams.map((t) => t.id));
 const individualIds = new Set(dump.individuals.map((i) => i.id));
 const regionNames = new Map(dump.regions.map((r) => [r.id, r.name]));
 const purchased = dump.offsets.filter((o) => o.purchased);
+// Unpurchased rows without a Stripe session are gifts staff entered by hand
+// (donations, grants, checks). The old site credited them to their accounts,
+// so they're imported too; one with a session would be an abandoned checkout.
+const gifts = dump.offsets.filter((o) => !o.purchased && !o.checkout_session_id);
+const imported = [...purchased, ...gifts];
 
 // The app looks accounts up by exact email match, so store one spelling.
 const normalizeEmail = (e) => (e || "").trim().toLowerCase();
@@ -70,17 +75,32 @@ const teamDocIdFor = (o) => {
   return null;
 };
 
-const dollarsByAccount = new Map();
-for (const o of purchased) {
+// Pounds are credited from dollars at the offset price so they can't drift
+// from the money. Offsets sold at the old $20/ton price (2015 to Oct 2016)
+// keep the pounds they were sold for.
+const creditedPounds = (o) => {
+  const pounds = parseFloat(o.pounds) || 0;
+  const cost = parseFloat(o.cost) || 0;
+  return Math.abs(cost * 100 - pounds) <= 1 ? pounds : poundsForDollars(cost);
+};
+
+const totalsByAccount = new Map();
+for (const o of imported) {
   const key = teamDocIdFor(o);
-  if (key) dollarsByAccount.set(key, (dollarsByAccount.get(key) || 0) + (o.cost || 0));
+  if (!key) continue;
+  const t = totalsByAccount.get(key) || { pounds: 0, dollars: 0, count: 0 };
+  t.pounds += creditedPounds(o);
+  t.dollars += parseFloat(o.cost) || 0;
+  t.count += 1;
+  totalsByAccount.set(key, t);
 }
 
 // ─── Transforms ───────────────────────────────────────────────────────────────
 // Offsets carry both the legacy field names and the ones the new app writes
 // (userEmail, carbonPounds, status, timestamp) so every reader sees one shape.
 function offsetDoc(o) {
-  const pounds = parseFloat(o.pounds) || 0;
+  const pounds = creditedPounds(o);
+  const recorded = parseFloat(o.pounds) || 0;
   const email = normalizeEmail(o.email);
   const created = o.created_at ? new Date(o.created_at) : null;
   return {
@@ -97,8 +117,9 @@ function offsetDoc(o) {
     pounds,
     carbonPounds: pounds,
     carbonKg: pounds / LBS_PER_KG,
+    ...(Math.abs(recorded - pounds) > 0.005 ? { legacyPounds: recorded } : {}),
     cost: parseFloat(o.cost) || 0,
-    purchased: true,
+    purchased: o.purchased === true, // false = a gift entered by hand on the old site
     status: "completed",
     zipcode: o.zipcode ? parseInt(o.zipcode) : null,
     zipCode: o.zipcode ? String(o.zipcode) : null,
@@ -120,17 +141,21 @@ function offsetDoc(o) {
 const memberRowsByTeam = new Map();
 for (const m of dump.teamMembers) memberRowsByTeam.set(m.team_id, (memberRowsByTeam.get(m.team_id) || 0) + 1);
 
-// pounds/count are the old site's stored totals, imported as-is (they don't
-// equal the sum of offsets for most teams, and the leaderboard should match the old site).
+// Totals are rebuilt from the imported offsets. The old site's stored
+// pounds/count had drifted from its own offsets (Colgate: 52,392 lbs stored
+// against 692,471 lbs of purchases), so they aren't used.
+const accountTotals = (key) => {
+  const t = totalsByAccount.get(key) || { pounds: 0, dollars: 0, count: 0 };
+  return { pounds: t.pounds, count: t.count, totalDollars: t.dollars };
+};
+
 const accountDoc = (a, isIndividual) => ({
   legacyId: a.id,
   source: "legacy",
   name: a.name,
   ...(isIndividual ? { email: normalizeEmail(a.email) || null } : {}),
   membersCount: isIndividual ? 1 : memberRowsByTeam.get(a.id) || 0,
-  pounds: a.pounds ?? 0,
-  count: a.count ?? 0,
-  totalDollars: dollarsByAccount.get(`${isIndividual ? "ind" : "team"}-${a.id}`) || 0,
+  ...accountTotals(`${isIndividual ? "ind" : "team"}-${a.id}`),
   regionId: a.region_id ?? null,
   regionName: a.region_id ? regionNames.get(a.region_id) ?? null : null,
   isIndividual,
@@ -186,35 +211,35 @@ const plan = [
     docs: dump.teamMembers.filter((m) => teamIds.has(m.team_id)).map((m) => [String(m.id), memberDoc(m)]),
   },
   { collection: "users", docs: dump.users.map((u) => [String(u.id), userDoc(u)]) },
-  { collection: "offsets", docs: purchased.map((o) => [String(o.id), offsetDoc(o)]) },
+  { collection: "offsets", docs: imported.map((o) => [String(o.id), offsetDoc(o)]) },
 ];
 
 // ─── Preflight ────────────────────────────────────────────────────────────────
 const sum = (rows, f) => rows.reduce((s, r) => s + (parseFloat(f(r)) || 0), 0);
 const expected = {
   counts: Object.fromEntries(plan.map((p) => [p.collection, p.docs.length])),
-  pounds: sum(purchased, (o) => o.pounds),
-  dollars: sum(purchased, (o) => o.cost),
+  pounds: sum(imported, creditedPounds),
+  dollars: sum(imported, (o) => o.cost),
 };
 
 function preflight() {
-  const dates = dump.offsets.map((o) => o.created_at).filter(Boolean).sort();
+  const dates = imported.map((o) => o.created_at).filter(Boolean).sort();
   console.log(`Dump: ${dumpDir}`);
-  console.log(`  offsets       ${dump.offsets.length} rows, ${purchased.length} purchased (unpurchased are skipped)`);
+  console.log(`  offsets       ${dump.offsets.length} rows: ${purchased.length} purchased, ${gifts.length} entered by hand, ${dump.offsets.length - imported.length} skipped`);
   console.log(`                ${dates[0]?.slice(0, 10)} → ${dates.at(-1)?.slice(0, 10)}`);
   console.log(`  teams         ${dump.teams.length}`);
   console.log(`  individuals   ${dump.individuals.length}`);
   console.log(`  team members  ${dump.teamMembers.length}`);
   console.log(`  regions       ${dump.regions.length}`);
   console.log(`  users         ${dump.users.length}`);
-  console.log(`  purchased totals: ${Math.round(expected.pounds).toLocaleString()} lbs, $${Math.round(expected.dollars).toLocaleString()}`);
+  console.log(`  imported totals: ${Math.round(expected.pounds).toLocaleString()} lbs, $${Math.round(expected.dollars).toLocaleString()}`);
 
   const warnings = [
-    [purchased.filter((o) => o.individual_id > 0 && !individualIds.has(o.individual_id)).length, "offsets reference an individual that no longer exists (imported without an account link)"],
-    [purchased.filter((o) => o.team_id > 0 && !teamIds.has(o.team_id)).length, "offsets reference a team that no longer exists (imported without an account link)"],
-    [purchased.filter((o) => o.team_id > 0 && o.individual_id > 0).length, "offsets have both a team and an individual (linked to the team)"],
+    [imported.filter((o) => o.individual_id > 0 && !individualIds.has(o.individual_id)).length, "offsets reference an individual that no longer exists (imported without an account link)"],
+    [imported.filter((o) => o.team_id > 0 && !teamIds.has(o.team_id)).length, "offsets reference a team that no longer exists (imported without an account link)"],
+    [imported.filter((o) => o.team_id > 0 && o.individual_id > 0).length, "offsets have both a team and an individual (linked to the team)"],
     [dump.teamMembers.filter((m) => !teamIds.has(m.team_id)).length, "team members belong to a missing team (skipped)"],
-    [purchased.filter((o) => !o.created_at).length, "offsets have no created_at"],
+    [imported.filter((o) => !o.created_at).length, "offsets have no created_at"],
   ].filter(([n]) => n > 0);
   warnings.forEach(([n, msg]) => console.log(`  ⚠️  ${n} ${msg}`));
 

@@ -126,9 +126,9 @@ Notes:
 - `total` is the number of entries matching the filter, not the number
   returned. `totals` sums the whole filtered set, not just the page.
 - `pounds` and `offsets` are the stored Carbon Race totals for that account, the
-  same figures the calculator's leaderboard shows. They are not recomputed from
-  the offset records — the fund's totals predate this site and are maintained
-  deliberately.
+  same figures the calculator's leaderboard shows. Pounds follow the account's
+  dollars at the offset price ($25/ton; offsets sold at the pre-2017 $20/ton
+  price keep their original pounds).
 - `region` is `null` for accounts with no region set.
 - Accounts that have never offset anything are left out unless you ask for
   `includeEmpty=1`.
