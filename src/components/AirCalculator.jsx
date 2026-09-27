@@ -1,7 +1,7 @@
 import { useState, useContext } from "react";
 import LocationInput from "./LocationInput";
 import useGoogleMaps from "../hooks/useGoogleMaps";
-import { computeRoute } from "../utils/routesApi";
+import { greatCircleMiles } from "../utils/geo";
 import { CartContext } from "../contexts/CartContext";
 import { PageHeader } from "./ui";
 
@@ -28,51 +28,33 @@ const AirCalculator = ({ setActiveTab }) => {
     setIsCalculating(true);
 
     try {
-      const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+      // Flights go straight, so use the great-circle distance rather than a
+      // driving route (which doesn't exist across oceans).
+      let distanceInMiles = greatCircleMiles(origin, destination);
 
-      // For air travel, we calculate straight-line distance (great circle)
-      const routeResult = await computeRoute(
-        origin,
-        destination,
-        "DRIVE", // We'll calculate straight-line distance manually
-        apiKey
-      );
-
-      if (routeResult.success) {
-        // Use the driving distance as approximation, or calculate great circle
-        let distanceInMiles = routeResult.distanceMiles;
-
-        // For flights, use straight-line distance (approximate)
-        // In a real app, you'd use the Haversine formula
-        distanceInMiles = distanceInMiles * 0.8; // Rough approximation
-
-        if (isRoundTrip) {
-          distanceInMiles *= 2;
-        }
-
-        setDistance(distanceInMiles);
-        const { co2: calculatedCo2, cost: calculatedCost } =
-          calculateEmissions(distanceInMiles);
-
-        // Automatically add to cart
-        const numTravelers = parseInt(travelers) || 1;
-        addToCart({
-          origin: origin?.description || "Manual Entry",
-          destination: destination?.description || "",
-          distance: distanceInMiles,
-          co2: calculatedCo2,
-          cost: calculatedCost,
-          tripMode: "air",
-          travelers: numTravelers,
-          flightClass,
-        });
-
-        // Navigate to cart
-        setActiveTab("cart");
-      } else {
-        console.error("Route calculation failed:", routeResult.error);
-        alert(`Unable to calculate route: ${routeResult.error}`);
+      if (isRoundTrip) {
+        distanceInMiles *= 2;
       }
+
+      setDistance(distanceInMiles);
+      const { co2: calculatedCo2, cost: calculatedCost } =
+        calculateEmissions(distanceInMiles);
+
+      // Automatically add to cart
+      const numTravelers = parseInt(travelers) || 1;
+      addToCart({
+        origin: origin?.description || "Manual Entry",
+        destination: destination?.description || "",
+        distance: distanceInMiles,
+        co2: calculatedCo2,
+        cost: calculatedCost,
+        tripMode: "air",
+        travelers: numTravelers,
+        flightClass,
+      });
+
+      // Navigate to cart
+      setActiveTab("cart");
     } catch (error) {
       console.error("Distance calculation failed:", error);
       alert(`Error calculating distance: ${error.message}`);
