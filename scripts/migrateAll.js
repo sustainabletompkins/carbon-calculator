@@ -78,10 +78,11 @@ const teamDocIdFor = (o) => {
 // Pounds are credited from dollars at the offset price so they can't drift
 // from the money. Offsets sold at the old $20/ton price (2015 to Oct 2016)
 // keep the pounds they were sold for.
+const round2 = (n) => Math.round(n * 100) / 100;
 const creditedPounds = (o) => {
   const pounds = parseFloat(o.pounds) || 0;
   const cost = parseFloat(o.cost) || 0;
-  return Math.abs(cost * 100 - pounds) <= 1 ? pounds : poundsForDollars(cost);
+  return Math.abs(cost * 100 - pounds) <= 1 ? pounds : round2(poundsForDollars(cost));
 };
 
 const totalsByAccount = new Map();
@@ -146,7 +147,7 @@ for (const m of dump.teamMembers) memberRowsByTeam.set(m.team_id, (memberRowsByT
 // against 692,471 lbs of purchases), so they aren't used.
 const accountTotals = (key) => {
   const t = totalsByAccount.get(key) || { pounds: 0, dollars: 0, count: 0 };
-  return { pounds: t.pounds, count: t.count, totalDollars: t.dollars };
+  return { pounds: round2(t.pounds), count: t.count, totalDollars: round2(t.dollars) };
 };
 
 const accountDoc = (a, isIndividual) => ({

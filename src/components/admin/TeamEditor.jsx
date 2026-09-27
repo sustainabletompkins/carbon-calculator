@@ -5,6 +5,9 @@ import { Button, FormField, Input, Select, Alert } from "../ui";
 import Modal from "./Modal";
 import { fmtDate, fmtMoney, fmtPounds, fmtInt } from "./format";
 
+// Stored totals are float sums (1787364.4000000004); show them to the cent.
+const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
+
 /** Create (`team` = null) or edit a Carbon Race team / individual account. */
 export default function TeamEditor({ team, regions, onClose, onChanged }) {
   const { getToken } = useAuth();
@@ -14,10 +17,11 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
     email: team?.email || "",
     isIndividual: team?.isIndividual || false,
     regionId: team?.regionId ?? "",
-    pounds: String(team?.pounds ?? 0),
+    pounds: String(round2(team?.pounds)),
     count: String(team?.count ?? 0),
-    totalDollars: String(team?.totalDollars ?? 0),
+    totalDollars: String(round2(team?.totalDollars)),
   });
+  const [tab, setTab] = useState("details");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -86,7 +90,7 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
     if (!window.confirm("Replace this team's stored totals with the totals calculated from the log?")) return;
     try {
       const t = await adminJson(getToken, `${base}/recalculate`, { method: "POST" });
-      setForm((f) => ({ ...f, pounds: String(t.pounds), count: String(t.count), totalDollars: String(t.totalDollars) }));
+      setForm((f) => ({ ...f, pounds: String(round2(t.pounds)), count: String(t.count), totalDollars: String(round2(t.totalDollars)) }));
       setRecalc(null);
       setNotice("Totals updated from the log.");
       onChanged(null, false);
@@ -128,12 +132,38 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
     }
   };
 
+  const tabs = [
+    ["details", "Details"],
+    ...(!creating && !team.isIndividual ? [["members", `Members${members ? ` (${fmtInt(members.length)})` : ""}`]] : []),
+    ...(!creating ? [["offsets", `Offsets${offsets ? ` (${fmtInt(offsets.total)})` : ""}`]] : []),
+  ];
+
   return (
     <Modal title={creating ? "New team" : team.name} onClose={onClose} wide>
       <div className="flex flex-col gap-6">
         {error && <Alert variant="error" onClose={() => setError(null)}>{error}</Alert>}
         {notice && <Alert variant="success" onClose={() => setNotice(null)}>{notice}</Alert>}
 
+        {tabs.length > 1 && (
+          <div role="tablist" aria-label="Team sections" className="flex gap-1 overflow-x-auto border-b border-border -mt-2">
+            {tabs.map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={tab === id}
+                onClick={() => setTab(id)}
+                className={`px-4 py-2 font-semibold whitespace-nowrap border-b-2 -mb-px cursor-pointer transition-colors ${
+                  tab === id ? "border-primary text-text" : "border-transparent text-muted hover:text-text"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {tab === "details" && (
         <form onSubmit={save} className="flex flex-col gap-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <FormField label="Name" required>
@@ -188,9 +218,6 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
                       <strong>{fmtPounds(recalc.computed.pounds)}</strong>, <strong>{fmtInt(recalc.computed.count)}</strong> offsets,{" "}
                       <strong>{fmtMoney(recalc.computed.totalDollars)}</strong>.
                     </p>
-                    <p className="text-muted mt-1">
-                      Totals imported from the old system may be higher than the log if older records were not carried over.
-                    </p>
                     <Button type="button" size="sm" variant="outline" className="mt-2" onClick={applyTotals}>
                       Use the log&apos;s totals
                     </Button>
@@ -210,14 +237,19 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
             </div>
           </div>
         </form>
+        )}
 
-        {!creating && !team.isIndividual && (
+        {tab === "members" && (
           <section>
-            <h3 className="text-lg font-semibold text-text mb-2">Members {members && `(${members.length})`}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 mb-3">
+              <Input placeholder="Name" value={newMember.name} onChange={(e) => setNewMember((n) => ({ ...n, name: e.target.value }))} aria-label="New member name" />
+              <Input type="email" placeholder="Email" value={newMember.email} onChange={(e) => setNewMember((n) => ({ ...n, email: e.target.value }))} aria-label="New member email" />
+              <Button type="button" variant="outline" onClick={addMember} disabled={!newMember.email}>Add member</Button>
+            </div>
             {members === null ? (
               <p className="text-muted text-sm">Loading…</p>
             ) : (
-              <ul className="divide-y divide-border border border-border rounded-md max-h-80 overflow-y-auto">
+              <ul className="divide-y divide-border border border-border rounded-md max-h-[55vh] overflow-y-auto">
                 {members.length === 0 && <li className="px-3 py-3 text-sm text-muted">No members yet.</li>}
                 {members.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
@@ -231,20 +263,20 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
                 ))}
               </ul>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-2 mt-3">
-              <Input placeholder="Name" value={newMember.name} onChange={(e) => setNewMember((n) => ({ ...n, name: e.target.value }))} aria-label="New member name" />
-              <Input type="email" placeholder="Email" value={newMember.email} onChange={(e) => setNewMember((n) => ({ ...n, email: e.target.value }))} aria-label="New member email" />
-              <Button type="button" variant="outline" onClick={addMember} disabled={!newMember.email}>Add member</Button>
-            </div>
           </section>
         )}
 
-        {!creating && offsets && (
+        {tab === "offsets" && (
           <section>
-            <h3 className="text-lg font-semibold text-text mb-2">Recent offsets credited ({fmtInt(offsets.total)})</h3>
-            {offsets.rows.length === 0 ? (
+            {!offsets ? (
+              <p className="text-muted text-sm">Loading…</p>
+            ) : offsets.rows.length === 0 ? (
               <p className="text-sm text-muted">Nothing in the log is credited to this team yet.</p>
             ) : (
+              <>
+              <p className="text-sm text-muted mb-2">
+                The {fmtInt(offsets.rows.length)} most recent of {fmtInt(offsets.total)}. The Offsets log has the full list.
+              </p>
               <ul className="divide-y divide-border border border-border rounded-md text-sm">
                 {offsets.rows.map((r) => (
                   <li key={r.id} className="flex justify-between gap-3 px-3 py-2">
@@ -253,6 +285,7 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
                   </li>
                 ))}
               </ul>
+              </>
             )}
           </section>
         )}

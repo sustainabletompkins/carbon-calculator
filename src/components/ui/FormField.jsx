@@ -1,8 +1,10 @@
 import { cloneElement, useId } from 'react';
 
-export function Input({ error, className = '', ...props }) {
+// type defaults to "text" because index.css styles inputs by type.
+export function Input({ error, className = '', type = 'text', ...props }) {
   return (
     <input
+      type={type}
       className={['w-full', className].filter(Boolean).join(' ')}
       aria-invalid={error ? 'true' : undefined}
       {...props}
