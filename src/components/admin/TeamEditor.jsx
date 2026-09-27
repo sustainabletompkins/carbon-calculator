@@ -217,7 +217,7 @@ export default function TeamEditor({ team, regions, onClose, onChanged }) {
             {members === null ? (
               <p className="text-muted text-sm">Loading…</p>
             ) : (
-              <ul className="divide-y divide-border border border-border rounded-md">
+              <ul className="divide-y divide-border border border-border rounded-md max-h-80 overflow-y-auto">
                 {members.length === 0 && <li className="px-3 py-3 text-sm text-muted">No members yet.</li>}
                 {members.map((m) => (
                   <li key={m.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
