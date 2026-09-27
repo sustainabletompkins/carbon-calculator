@@ -10,6 +10,21 @@ import QuickOffset from "./QuickOffset";
 import Cart from "./Cart";
 import ThankYou from "./ThankYou";
 
+// CO2 from burning one gallon of gasoline: 19.64 lbs, the same factor the
+// previous app used, expressed in kg.
+const KG_CO2_PER_GALLON = 19.64 / 2.20462;
+
+// Returns the entered mpg as a number, or null (after alerting) if it isn't
+// a usable value.
+const parseMpg = (value) => {
+  const mpg = parseFloat(value);
+  if (isNaN(mpg) || mpg <= 0) {
+    alert("Please enter a valid car mpg");
+    return null;
+  }
+  return mpg;
+};
+
 const CarCalculator = ({ setActiveTab }) => {
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
@@ -28,6 +43,8 @@ const CarCalculator = ({ setActiveTab }) => {
       alert("Please select both origin and destination locations");
       return;
     }
+    const mpg = parseMpg(carMpg);
+    if (mpg === null) return;
 
     setIsCalculating(true);
 
@@ -49,7 +66,7 @@ const CarCalculator = ({ setActiveTab }) => {
         }
         setDistance(distanceInMiles);
         const { co2: calculatedCo2, cost: calculatedCost } =
-          calculateEmissions(distanceInMiles);
+          calculateEmissions(distanceInMiles, mpg);
 
         // Automatically add to cart
         addToCart({
@@ -81,6 +98,8 @@ const CarCalculator = ({ setActiveTab }) => {
       alert("Please enter a valid mileage");
       return;
     }
+    const mpg = parseMpg(carMpg);
+    if (mpg === null) return;
 
     let totalMiles = miles;
     if (isRoundTrip) {
@@ -89,7 +108,7 @@ const CarCalculator = ({ setActiveTab }) => {
 
     setDistance(totalMiles);
     const { co2: calculatedCo2, cost: calculatedCost } =
-      calculateEmissions(totalMiles);
+      calculateEmissions(totalMiles, mpg);
 
     // Automatically add to cart
     addToCart({
@@ -105,10 +124,8 @@ const CarCalculator = ({ setActiveTab }) => {
     setActiveTab("cart");
   };
 
-  const calculateEmissions = (distance) => {
-    // TODO: Implement correct emission factors
-    const co2PerMile = 0.404;
-    const calculatedCo2 = distance * co2PerMile;
+  const calculateEmissions = (distance, mpg) => {
+    const calculatedCo2 = (distance / mpg) * KG_CO2_PER_GALLON;
     setCo2(calculatedCo2);
     const calculatedCost = calculateCost(calculatedCo2);
     return { co2: calculatedCo2, cost: calculatedCost };
