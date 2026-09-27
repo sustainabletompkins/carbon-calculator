@@ -2,7 +2,11 @@ import { ArrowRight } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import useGoogleMaps from "../hooks/useGoogleMaps";
 
-const LocationInput = ({ setOrigin, setDestination }) => {
+// Limiting suggestions to airports means typing a city ("Paris") offers its
+// airports (CDG, Orly) rather than streets and neighborhoods.
+const AIRPORT_TYPES = ["airport"];
+
+const LocationInput = ({ setOrigin, setDestination, airportsOnly = false }) => {
   const google = useGoogleMaps();
   const originRef = useRef(null);
   const destinationRef = useRef(null);
@@ -18,12 +22,16 @@ const LocationInput = ({ setOrigin, setDestination }) => {
       originRef.current &&
       destinationRef.current
     ) {
-      const originAutocomplete = new google.places.PlaceAutocompleteElement();
+      const options = airportsOnly ? { includedPrimaryTypes: AIRPORT_TYPES } : {};
+
+      const originAutocomplete = new google.places.PlaceAutocompleteElement(
+        options
+      );
       originAutocompleteRef.current = originAutocomplete;
       originRef.current.appendChild(originAutocomplete);
 
       const destinationAutocomplete =
-        new google.places.PlaceAutocompleteElement();
+        new google.places.PlaceAutocompleteElement(options);
       destinationAutocompleteRef.current = destinationAutocomplete;
       destinationRef.current.appendChild(destinationAutocomplete);
 
@@ -93,7 +101,7 @@ const LocationInput = ({ setOrigin, setDestination }) => {
         });
       }
     }
-  }, [google, setOrigin, setDestination]);
+  }, [google, setOrigin, setDestination, airportsOnly]);
 
   return (
     <div className="space-y-2">

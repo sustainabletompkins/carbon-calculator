@@ -214,6 +214,7 @@ const AirCalculator = ({ setActiveTab }) => {
             <LocationInput
               setOrigin={setOrigin}
               setDestination={setDestination}
+              airportsOnly
               placeholder={{
                 origin: "starting location",
                 destination: "end location",
